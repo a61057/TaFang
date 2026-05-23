@@ -1,8 +1,6 @@
 import { TOWER_TYPES, TOWER_KEYS } from '../config/towerData.js';
 import { t } from '../config/locale.js';
 
-const TOWER_KEYS_MAP = { CANNON: 'cannon', MACHINE: 'machine', MORTAR: 'mortar', SLOW: 'slow', ELECTRIC: 'electric' };
-
 export class BuildMenu {
   constructor(gameEngine) {
     this.engine = gameEngine;
@@ -24,6 +22,12 @@ export class BuildMenu {
     document.body.appendChild(this.element);
     this.optionsContainer = this.element.querySelector('#buildOptions');
     this.hide();
+  }
+
+  refresh() {
+    if (this.visible) {
+      this.show(this.col, this.row);
+    }
   }
 
   show(col, row) {
@@ -51,10 +55,33 @@ export class BuildMenu {
     this.optionsContainer.innerHTML = '';
     for (const key of TOWER_KEYS) {
       const type = TOWER_TYPES[key];
+      const unlocked = this.engine.isTowerUnlocked(key);
       const cost = type.levels[0].cost;
+      const localeKey = key.toLowerCase();
+
+      if (!unlocked) {
+        const uc = type.unlockCost;
+        if (!uc) continue;
+        const canUnlock = this.engine.gold >= uc;
+        const btn = document.createElement('button');
+        btn.className = `build-btn ${!canUnlock ? 'disabled' : ''}`;
+        btn.innerHTML = `
+          <span class="tower-name">❓ ${t(`tower.${localeKey}.name`)}</span>
+          <span class="tower-cost">${t('buildMenu.unlock', uc)}</span>
+          <span class="tower-desc">${t(`tower.${localeKey}.desc`)}</span>
+        `;
+        if (canUnlock) {
+          btn.addEventListener('click', () => {
+            this.engine.unlockTower(key);
+            this.refresh();
+          });
+        }
+        this.optionsContainer.appendChild(btn);
+        continue;
+      }
+
       const canAfford = this.engine.gold >= cost;
       const canBuild = this.engine.towerManager.canBuild(col, row, key);
-      const localeKey = TOWER_KEYS_MAP[key] || key.toLowerCase();
 
       const btn = document.createElement('button');
       btn.className = `build-btn ${!canBuild || !canAfford ? 'disabled' : ''}`;

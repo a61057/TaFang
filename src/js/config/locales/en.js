@@ -289,4 +289,18 @@ export const en = {
   'faction.elf': 'Elf',
   'faction.machine': 'Machine',
   'faction.undead': 'Undead',
+
+  // Mini-Game
+  'miniGame.title': '🎮 Mini-Game',
+  'miniGame.subtitle': 'Wave {0} cleared! Time for a mini-game break',
+  'miniGame.whack': '🔨 Whack-a-Mole',
+  'miniGame.catch': '📦 Catch Items',
+  'miniGame.memory': '🃏 Memory Match',
+  'miniGame.shoot': '🎯 Target Shoot',
+  'miniGame.score': 'Score',
+  'miniGame.time': 'Time',
+  'miniGame.flips': 'Flips',
+  'miniGame.matched': 'Matched',
+  'miniGame.complete': '🎉 Mini-Game Complete! Bonus',
+  'miniGame.result': 'Score: {0} | Gold: +{1}',
 };

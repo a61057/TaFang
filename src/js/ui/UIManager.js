@@ -160,6 +160,8 @@ export class UIManager {
   }
 
   refreshLanguage() {
+    this.buildMenu.hide();
+    this.towerInfo.hide();
     this.hud.destroy();
     this.hud = new HUD(this.engine);
   }

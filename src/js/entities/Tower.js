@@ -349,6 +349,118 @@ export class Tower {
         ctx.fillRect(x - 10, y + 2, 20, 4);
         break;
       }
+      case 'SNIPER': {
+        // Tripod base
+        ctx.fillStyle = '#3a3a4a';
+        ctx.fillRect(x - 16, y + 2, 32, 4);
+        ctx.fillStyle = '#4a4a5a';
+        ctx.fillRect(x - 14, y, 28, 4);
+        // Long barrel
+        ctx.save();
+        ctx.translate(x, y - 4);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = '#2a2a3a';
+        ctx.fillRect(-3, -3, 44, 6);
+        ctx.fillStyle = '#4a4a6a';
+        ctx.fillRect(-2, -2, 40, 4);
+        ctx.fillStyle = '#1a1a2a';
+        ctx.fillRect(38, -4, 5, 8);
+        // Scope
+        ctx.fillStyle = '#556';
+        ctx.fillRect(12, -6, 10, 12);
+        ctx.fillStyle = '#aaccff';
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(14, -4, 6, 8);
+        ctx.globalAlpha = flashAlpha;
+        ctx.restore();
+        // Bipod legs
+        ctx.strokeStyle = '#3a3a4a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 4, y + 2);
+        ctx.lineTo(x - 12, y + 14);
+        ctx.moveTo(x + 4, y + 2);
+        ctx.lineTo(x + 12, y + 14);
+        ctx.stroke();
+        break;
+      }
+      case 'FLAMETHROWER': {
+        // Fuel tank
+        ctx.fillStyle = '#5a3a2a';
+        ctx.beginPath();
+        ctx.arc(x - 8, y + 4, 10 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#7a4a3a';
+        ctx.beginPath();
+        ctx.arc(x - 8, y + 2, 8 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        // Nozzle
+        ctx.save();
+        ctx.translate(x, y - 2);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = '#444';
+        ctx.fillRect(0, -4, 24, 8);
+        ctx.fillStyle = '#666';
+        ctx.fillRect(20, -5, 6, 10);
+        ctx.fillStyle = '#222';
+        ctx.fillRect(24, -6, 4, 12);
+        // Pilot flame
+        if (this.target) {
+          ctx.fillStyle = '#ff6600';
+          ctx.shadowColor = '#ff6600';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(30, 0, 3 + Math.sin(Date.now() / 80) * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+        ctx.restore();
+        // Pipe
+        ctx.strokeStyle = '#5a4a3a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 4);
+        ctx.quadraticCurveTo(x - 6, y - 10, x, y - 8);
+        ctx.stroke();
+        break;
+      }
+      case 'ARC': {
+        // Base
+        ctx.fillStyle = '#2a4a44';
+        ctx.fillRect(x - 5, y - 20 * lvlScale, 10, 24 * lvlScale);
+        ctx.fillStyle = '#3a6a5a';
+        ctx.fillRect(x - 3, y - 18 * lvlScale, 6, 20 * lvlScale);
+        // Coils
+        ctx.strokeStyle = '#44aa88';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+          const cy = y - 14 * lvlScale + i * 10;
+          ctx.beginPath();
+          ctx.ellipse(x, cy, 10, 3, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        // Arc emitter
+        ctx.fillStyle = '#44ffcc';
+        ctx.shadowColor = '#44ffcc';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(x, y - 22 * lvlScale, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        // Pulsing rings
+        const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+        ctx.strokeStyle = `rgba(68,255,204,${pulse * 0.3})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y - 22 * lvlScale, 10 + pulse * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        // Base plate
+        ctx.fillStyle = '#2a4a44';
+        ctx.fillRect(x - 14, y + 4, 28, 5);
+        ctx.fillStyle = '#3a5a54';
+        ctx.fillRect(x - 12, y + 2, 24, 4);
+        break;
+      }
     }
 
     ctx.globalAlpha = 1;

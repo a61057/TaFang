@@ -17,7 +17,8 @@ import { HeroPanel } from '../ui/HeroPanel.js';
 import { TOWER_TYPES } from '../config/towerData.js';
 import { HERO_TEMPLATES, WEAPONS } from '../config/heroData.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
-import { COLS, ROWS, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, STARTING_GOLD, STARTING_LIVES, GAME_SPEEDS, TERRAIN, HERO_REVIVE_COST, WEATHER_TYPES } from '../config/constants.js';
+import { COLS, ROWS, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, STARTING_GOLD, STARTING_LIVES, GAME_SPEEDS, TERRAIN, HERO_REVIVE_COST, WEATHER_TYPES, PREP_TIME } from '../config/constants.js';
+import { MiniGameManager } from '../ui/MiniGameManager.js';
 import { t, setLanguage, getLanguage } from '../config/locale.js';
 
 export class GameEngine extends EventEmitter {
@@ -46,6 +47,7 @@ export class GameEngine extends EventEmitter {
     this.gameOver = false;
     this.running = false;
     this.gameMode = 'campaign';
+    this.unlockedTowers = new Set(['CANNON', 'MACHINE', 'MORTAR', 'SLOW', 'ELECTRIC']);
     this.victoryShown = false;
 
     this.lastFrameTime = 0;
@@ -97,6 +99,9 @@ export class GameEngine extends EventEmitter {
 
     this._initInput();
     this._initShortcuts();
+
+    this.miniGameManager = new MiniGameManager();
+    this._miniGameActive = false;
 
     this.ui = new UIManager(this);
     this.heroPanel = new HeroPanel(this);
@@ -557,7 +562,7 @@ export class GameEngine extends EventEmitter {
   }
 
   _handleClick(e) {
-    if (this.gameOver) return;
+    if (this._miniGameActive || this.gameOver) return;
     this.audio.ensureResumed();
 
     const rect = this.canvas.getBoundingClientRect();
@@ -674,11 +679,26 @@ export class GameEngine extends EventEmitter {
     return false;
   }
 
+  isTowerUnlocked(typeId) {
+    return this.unlockedTowers.has(typeId);
+  }
+
+  unlockTower(typeId) {
+    if (this.unlockedTowers.has(typeId)) return false;
+    const type = TOWER_TYPES[typeId];
+    if (!type || !type.unlockCost) return false;
+    if (this.gold < type.unlockCost) return false;
+    this.gold -= type.unlockCost;
+    this.unlockedTowers.add(typeId);
+    this.audio.playBuild();
+    if (this.ui) this.ui.buildMenu.refresh();
+    return true;
+  }
+
   startNextWave() {
-    if (this.waveManager.isActive || this.waveManager.waveInProgress) return;
+    if (this._miniGameActive || this.waveManager.isActive || this.waveManager.waveInProgress) return;
     this.audio.playWaveStart();
     this.waveManager.startNextWave();
-    this.storyManager.onWaveStart(this.waveManager.currentWave);
   }
 
   _toggleLanguage() {
@@ -722,6 +742,7 @@ export class GameEngine extends EventEmitter {
   }
 
   buildTower(col, row, typeId) {
+    if (!this.isTowerUnlocked(typeId)) return false;
     const cost = TOWER_TYPES[typeId].levels[0].cost;
     if (this.gold < cost) return false;
 
@@ -864,6 +885,20 @@ export class GameEngine extends EventEmitter {
       this.audio.playGameOver();
       this.ui.gameOver.show('victory');
       this._autoSave();
+      this.emit('wave-complete', { wave, reward, perfect });
+      return;
+    }
+
+    // 小游戏关卡 — 每5波触发
+    if (this.gameMode === 'campaign' && wave % 5 === 0 && wave < 50) {
+      this._miniGameActive = true;
+      this.audio.playWaveStart();
+      this.miniGameManager.start(this, (score, goldReward) => {
+        this._miniGameActive = false;
+        this.waveManager.prepTimer = wave >= 30 ? Math.max(5, PREP_TIME - (wave - 30) * 0.5) : PREP_TIME;
+        this.waveManager.isActive = false;
+        this.waveManager.waveInProgress = false;
+      });
       this.emit('wave-complete', { wave, reward, perfect });
       return;
     }
@@ -1018,7 +1053,8 @@ export class GameEngine extends EventEmitter {
         weatherWaveCounter: this.weatherSystem.weatherWaveCounter,
         dayNightWaveCounter: this.weatherSystem.dayNightWaveCounter
       },
-      heroManager: this.heroManager.toJSON()
+      heroManager: this.heroManager.toJSON(),
+      unlockedTowers: Array.from(this.unlockedTowers)
     };
   }
 
@@ -1040,6 +1076,7 @@ export class GameEngine extends EventEmitter {
     this.waveManager = new WaveManager(this.enemyManager, this);
     this.waveManager.fromJSON(state.wave || {});
     this.gameMode = state.gameMode || 'campaign';
+    this.unlockedTowers = new Set(state.unlockedTowers || ['CANNON', 'MACHINE', 'MORTAR', 'SLOW', 'ELECTRIC']);
     this.victoryShown = false;
 
     if (state.heroManager) {

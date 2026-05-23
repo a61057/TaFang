@@ -137,16 +137,30 @@ export class WaveManager {
     }
   }
 
+  isMiniGameWave() {
+    return !this.isInfinite && this.currentWave % 5 === 0;
+  }
+
   endWave() {
     this.waveInProgress = false;
     this.isActive = false;
-    this.prepTimer = this.currentWave >= 30 ? Math.max(8, PREP_TIME - (this.currentWave - 30) * 0.4) : PREP_TIME;
+
+    if (this.isMiniGameWave()) {
+      this.prepTimer = 0;
+      if (this.gameEngine) {
+        this.gameEngine.onWaveComplete(this.currentWave, 0, this.perfectWave);
+      }
+      return;
+    }
+
+    this.prepTimer = this.currentWave >= 30 ? Math.max(5, PREP_TIME - (this.currentWave - 30) * 0.5) : PREP_TIME;
 
     const reward = WAVE_BASE_REWARD + this.currentWave * 10 + (this.perfectWave ? 50 : 0);
     if (this.gameEngine) {
       this.gameEngine.addGold(reward);
       this.gameEngine.onWaveComplete(this.currentWave, reward, this.perfectWave);
     }
+  }
   }
 
   startPrep() {

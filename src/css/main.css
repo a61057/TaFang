@@ -53,6 +53,20 @@ html, body {
 #titlebar .window-controls button:hover { background: rgba(255,255,255,0.1); }
 #titlebar .window-controls .btn-close:hover { background: #e74c3c; color: white; }
 
+.maximize-box {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.2px solid currentColor;
+  border-radius: 1px;
+  position: relative;
+  top: -1px;
+}
+
+.btn-maximize:hover .maximize-box {
+  border-color: #fff;
+}
+
 /* Game container */
 #gameContainer {
   position: fixed;
@@ -863,6 +877,191 @@ html, body {
 @keyframes dialogueBlink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* Mini-Game Overlay */
+#miniGameOverlay {
+  cursor: default;
+}
+
+.mg-container {
+  background: rgba(15,15,30,0.96);
+  border: 1px solid rgba(100,120,200,0.3);
+  border-radius: 12px;
+  padding: 24px 28px;
+  min-width: 480px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  animation: mgFadeIn 0.3s ease;
+}
+
+.mg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.mg-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.3);
+  letter-spacing: 1px;
+}
+
+.mg-score, .mg-timer, .mg-pairs {
+  font-size: 14px;
+  color: #aab;
+}
+
+.mg-score strong, .mg-timer strong, .mg-pairs strong {
+  color: #ffd700;
+  font-size: 18px;
+}
+
+.mg-grid {
+  display: grid;
+  gap: 10px;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+/* Whack-a-Mole */
+.mg-whack-grid .mg-hole {
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(ellipse at center, #2a2a4a 0%, #1a1a3a 60%, #0f0f2a 100%);
+  border-radius: 50%;
+  border: 2px solid rgba(100,120,200,0.2);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+  overflow: hidden;
+}
+
+.mg-whack-grid .mg-hole:hover {
+  border-color: rgba(100,120,200,0.4);
+  background: radial-gradient(ellipse at center, #3a3a5a 0%, #2a2a4a 60%, #1a1a3a 100%);
+}
+
+.mg-hole-bg {
+  position: absolute;
+  width: 100%;
+  height: 60%;
+  bottom: 0;
+  background: #1a1a2e;
+  border-radius: 50% 50% 0 0;
+  opacity: 0.5;
+}
+
+.mg-mole {
+  position: absolute;
+  font-size: 32px;
+  cursor: pointer;
+  animation: mgPopUp 0.15s ease;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Memory Match */
+.mg-memory-grid .mg-card {
+  width: 76px;
+  height: 90px;
+  perspective: 600px;
+  cursor: pointer;
+}
+
+.mg-card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+}
+
+.mg-card.mg-flipped .mg-card-inner,
+.mg-card.mg-matched .mg-card-inner {
+  transform: rotateY(180deg);
+}
+
+.mg-card-front, .mg-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.mg-card-front {
+  background: linear-gradient(135deg, #2a3a6a, #1a2a5a);
+  border: 2px solid rgba(100,120,200,0.3);
+  color: #aab;
+  font-size: 24px;
+}
+
+.mg-card-back {
+  background: linear-gradient(135deg, #1a2a3a, #2a3a4a);
+  border: 2px solid rgba(255,215,0,0.3);
+  transform: rotateY(180deg);
+}
+
+.mg-card.mg-matched .mg-card-back {
+  border-color: rgba(100,200,100,0.5);
+  background: linear-gradient(135deg, #1a3a2a, #2a4a3a);
+}
+
+.mg-card:hover .mg-card-front {
+  border-color: rgba(100,120,200,0.5);
+  background: linear-gradient(135deg, #3a4a7a, #2a3a6a);
+}
+
+/* Catch Items */
+.mg-catch-area {
+  background: linear-gradient(180deg, #0a0a1a 0%, #1a1a3a 100%);
+  border: 1px solid rgba(100,120,200,0.2);
+  border-radius: 8px;
+}
+
+/* Target Shoot */
+.mg-shoot-area {
+  background: radial-gradient(ellipse at center, #1a1a3a, #0a0a1a);
+  border: 1px solid rgba(100,120,200,0.2);
+  border-radius: 8px;
+}
+
+@keyframes mgFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes mgPopUp {
+  from { transform: scale(0) translateY(20px); }
+  to { transform: scale(1) translateY(0); }
+}
+
+@keyframes mgTargetPop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+.mini-game-result {
+  z-index: 860 !important;
+  font-weight: 700;
+  border-width: 2px;
+  text-align: center;
 }
 
 /* Animations */

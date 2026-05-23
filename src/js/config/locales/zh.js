@@ -125,6 +125,13 @@ export const zh = {
   'tower.slow.desc': '减速敌人，低伤害',
   'tower.electric.name': '特斯拉塔',
   'tower.electric.desc': '连锁闪电，攻击多个敌人',
+  'tower.sniper.name': '狙击塔',
+  'tower.sniper.desc': '超远射程，超高单体伤害',
+  'tower.flamethrower.name': '火焰喷射器',
+  'tower.flamethrower.desc': '近距离范围燃烧',
+  'tower.arc.name': '电弧塔',
+  'tower.arc.desc': '连锁电弧，攻击众多敌人',
+  'buildMenu.unlock': '🔓 解锁 (💰{0})',
 
   // Enemy names
   'enemy.normal.name': '普通',
@@ -282,4 +289,18 @@ export const zh = {
   'faction.elf': '精灵',
   'faction.machine': '机械',
   'faction.undead': '亡灵',
+
+  // Mini-Game
+  'miniGame.title': '🎮 小游戏关卡',
+  'miniGame.subtitle': '{0} 波完成！进入小游戏休息一下',
+  'miniGame.whack': '🔨 打地鼠',
+  'miniGame.catch': '📦 接物资',
+  'miniGame.memory': '🃏 记忆翻牌',
+  'miniGame.shoot': '🎯 射击靶场',
+  'miniGame.score': '得分',
+  'miniGame.time': '时间',
+  'miniGame.flips': '翻牌',
+  'miniGame.matched': '配对',
+  'miniGame.complete': '🎉 小游戏完成！奖励',
+  'miniGame.result': '得分: {0} | 金币: +{1}',
 };
