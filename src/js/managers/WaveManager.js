@@ -161,7 +161,6 @@ export class WaveManager {
       this.gameEngine.onWaveComplete(this.currentWave, reward, this.perfectWave);
     }
   }
-  }
 
   startPrep() {
     this.prepTimer = PREP_TIME;

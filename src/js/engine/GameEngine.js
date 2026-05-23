@@ -444,6 +444,7 @@ export class GameEngine extends EventEmitter {
     this._cursorMoveCooldown = 0;
 
     document.addEventListener('keydown', (e) => {
+      if (this._miniGameActive) return;
       if (e.key === 'Escape') {
         this.ui.buildMenu.hide();
         this.ui.towerInfo.hide();
@@ -451,7 +452,7 @@ export class GameEngine extends EventEmitter {
         this.selectedTile = null;
         this._cursorActive = false;
       }
-      if (e.key === 'p' || e.key === 'P') this.togglePause();
+      if ((e.key === 'p' || e.key === 'P') && !this._miniGameActive) this.togglePause();
       if (e.key === 'Enter') {
         e.preventDefault();
         this.startNextWave();
@@ -551,6 +552,7 @@ export class GameEngine extends EventEmitter {
   _initShortcuts() {
     if (window.electronAPI) {
       window.electronAPI.onShortcut((action) => {
+        if (this._miniGameActive) return;
         switch (action) {
           case 'toggle-pause': this.togglePause(); break;
           case 'quick-save': this.saveGame(0); break;
