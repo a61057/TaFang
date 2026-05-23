@@ -1,0 +1,56 @@
+{
+  "name": "tower-defense",
+  "version": "1.0.0",
+  "description": "A tower defense game built with Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "serve": "node serve.js",
+    "web": "node serve.js",
+    "pack": "electron-builder --win --x64",
+    "pack:win": "electron-builder --win --x64",
+    "pack:dir": "electron-builder --win --x64 --dir",
+    "dist": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.towerdefense.app",
+    "productName": "Tower Defense",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "src/icon.png",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Tower Defense"
+    },
+    "electronDownload": {
+      "version": "28.3.3"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "28.3.3",
+    "electron-packager": "^17.1.2"
+  },
+  "author": "",
+  "license": "MIT"
+}

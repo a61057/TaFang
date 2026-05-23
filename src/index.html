@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower Defense</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <!-- Custom Title Bar -->
+  <div id="titlebar">
+    <span class="title-text">⚔ TOWER DEFENSE</span>
+    <div class="window-controls">
+      <button class="btn-minimize" id="btnMinimize">─</button>
+      <button class="btn-maximize" id="btnMaximize">□</button>
+      <button class="btn-close" id="btnClose">✕</button>
+    </div>
+  </div>
+
+  <!-- Game Container -->
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- Achievement Notification -->
+  <div id="achievementNotify">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="ach-icon" id="achIcon">🏆</span>
+      <div>
+        <div class="ach-name" id="achName">Achievement!</div>
+        <div class="ach-desc" id="achDesc">Description</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/index.js"></script>
+</body>
+</html>
