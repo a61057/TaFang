@@ -13,6 +13,7 @@ import { FactionSystem } from '../managers/FactionSystem.js';
 import { EventSystem } from '../managers/EventSystem.js';
 import { StoryManager } from '../managers/StoryManager.js';
 import { WeatherSystem } from '../managers/WeatherSystem.js';
+import { FlowerManager, FLOWER_VARIETIES } from '../managers/FlowerManager.js';
 import { HeroPanel } from '../ui/HeroPanel.js';
 import { TOWER_TYPES } from '../config/towerData.js';
 import { HERO_TEMPLATES, WEAPONS } from '../config/heroData.js';
@@ -88,7 +89,9 @@ export class GameEngine extends EventEmitter {
 
     this._heroCollisionCooldown = 0;
     this.hero = new Hero();
+    this.heroes = [];
     this.hero.init(this.map, HERO_TEMPLATES.scout);
+    this.heroes.push(this.hero);
     this.heroManager = new HeroManager(this);
     this.heroManager.saveHeroState(this.hero);
     this.heroManager.applyHeroState(this.hero);
@@ -96,6 +99,7 @@ export class GameEngine extends EventEmitter {
     this.eventSystem = new EventSystem(this);
     this.storyManager = new StoryManager(this);
     this.weatherSystem = new WeatherSystem(this);
+    this.flowerManager = new FlowerManager(this);
 
     this._initInput();
     this._initShortcuts();
@@ -122,11 +126,14 @@ export class GameEngine extends EventEmitter {
     }
   }
 
-  async _loadLanguage() {
-    const result = await this.saveSystem.getSettings();
-    if (result.success && result.data && result.data.language) {
-      setLanguage(result.data.language);
-    }
+  _loadLanguage() {
+    try {
+      const data = localStorage.getItem('td_settings');
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (parsed.language) setLanguage(parsed.language);
+      }
+    } catch {}
   }
 
   _loadAchievements() {
@@ -226,46 +233,56 @@ export class GameEngine extends EventEmitter {
 
     // 英雄更新（含天气修正）
     const heroAtkMult = this.weatherSystem.getHeroAttackMultiplier();
-    this.hero._atkMult = heroAtkMult;
     let kbDx = 0, kbDy = 0;
     if (this._keys.left) kbDx = -1;
     if (this._keys.right) kbDx = 1;
     if (this._keys.up) kbDy = -1;
     if (this._keys.down) kbDy = 1;
-    const heroResult = this.hero.update(dt, aliveEnemies, this.map, kbDx, kbDy);
-    if (heroResult && heroResult.hit) {
-      this.particles.emit(this.hero.x, this.hero.y, 5, {
-        color: '#ffd700',
-        speed: 60,
-        size: 3,
-        life: 300
-      });
+
+    for (const hero of this.heroes) {
+      if (!hero.alive) continue;
+      hero._atkMult = heroAtkMult;
+      const isPlayer = hero === this.hero;
+      const result = hero.update(dt, aliveEnemies, this.map, isPlayer ? kbDx : 0, isPlayer ? kbDy : 0);
+      if (isPlayer) {
+        if (result && result.hit) {
+          this.particles.emit(hero.x, hero.y, 5, {
+            color: '#ffd700', speed: 60, size: 3, life: 300
+          });
+        }
+      } else {
+        hero._moveTarget = { x: this.hero.x, y: this.hero.y };
+      }
     }
 
     // 阵营系统
     this.factionSystem.update(this.towerManager.getTowers());
 
     this.particles.update(dt);
+    this.flowerManager.update(dt);
 
     // 英雄碰撞检测（撞人 & 受伤）
     this._heroCollisionCooldown = Math.max(0, this._heroCollisionCooldown - dt);
-    if (this.hero.alive && this._heroCollisionCooldown <= 0) {
-      const hx = this.hero.x, hy = this.hero.y;
-      const hw = this.hero._bodyW / 2, hh = this.hero._bodyH / 2;
-      for (const enemy of aliveEnemies) {
-        if (!enemy.alive || enemy.isFlying) continue;
-        const dx = Math.abs(enemy.x - hx);
-        const dy = Math.abs(enemy.y - hy);
-        if (dx < hw + enemy.size && dy < hh + enemy.size) {
-          this.hero.takeDamage(Math.max(1, Math.floor(enemy.bounty * 0.4)));
-          const ramDmg = Math.floor(this.hero.attack * 0.5);
-          enemy.takeDamage(ramDmg, true);
-          if (!enemy.alive) enemy._killed = true;
-          this.particles.emit(enemy.x, enemy.y, 8, {
-            color: '#ff4444', speed: 80, size: 3, life: 300
-          });
-          this._heroCollisionCooldown = 0.5;
-          break;
+    if (this._heroCollisionCooldown <= 0) {
+      for (const hero of this.heroes) {
+        if (!hero.alive) continue;
+        const hx = hero.x, hy = hero.y;
+        const hw = hero._bodyW / 2, hh = hero._bodyH / 2;
+        for (const enemy of aliveEnemies) {
+          if (!enemy.alive || enemy.isFlying) continue;
+          const dx = Math.abs(enemy.x - hx);
+          const dy = Math.abs(enemy.y - hy);
+          if (dx < hw + enemy.size && dy < hh + enemy.size) {
+            hero.takeDamage(Math.max(1, Math.floor(enemy.bounty * 0.4)));
+            const ramDmg = Math.floor(hero.attack * 0.5);
+            enemy.takeDamage(ramDmg, true);
+            if (!enemy.alive) enemy._killed = true;
+            this.particles.emit(enemy.x, enemy.y, 8, {
+              color: '#ff4444', speed: 80, size: 3, life: 300
+            });
+            this._heroCollisionCooldown = 0.5;
+            break;
+          }
         }
       }
     }
@@ -312,8 +329,15 @@ export class GameEngine extends EventEmitter {
         this.audio.playEnemyDeath();
         if (enemy._isBoss) this.stats.bossesKilled++;
 
-        // 英雄获得经验
-        this.hero.addXp(heroResult && heroResult.target === enemy ? 15 : 10);
+        // 英雄获得经验 - 击杀者+15，其他英雄+10
+        for (const h of this.heroes) {
+          if (!h.alive) continue;
+          if (h.currentTarget === enemy) {
+            h.addXp(15);
+          } else {
+            h.addXp(10);
+          }
+        }
 
         if (enemy.type === 'megaboss') {
           this.stats.bossesKilled++;
@@ -366,6 +390,9 @@ export class GameEngine extends EventEmitter {
     // Draw map
     this.map.render(ctx, this.offsetX, this.offsetY, this.showDebug);
 
+    // Draw flowers
+    this.flowerManager.render(ctx, this.offsetX, this.offsetY);
+
     // Draw hover preview
     if (this._hoveredTile && this._hoveredBuildType && !this.selectedTower) {
       const { col, row } = this._hoveredTile;
@@ -374,6 +401,29 @@ export class GameEngine extends EventEmitter {
       const ty = row * TILE_SIZE + this.offsetY;
       ctx.fillStyle = canBuild ? 'rgba(100, 255, 100, 0.25)' : 'rgba(255, 100, 100, 0.25)';
       ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
+    }
+
+    // Draw flower mode hover
+    if (this.flowerMode && this._hoveredTile && !this.selectedTower) {
+      const { col, row } = this._hoveredTile;
+      if (this.map.getTerrain(col, row) === TERRAIN.GRASS && !this.flowerManager.getFlowerAt(col, row)) {
+        const v = this.flowerManager.selectedVariety;
+        const canAfford = this.gold >= v.cost;
+        const tx = col * TILE_SIZE + this.offsetX;
+        const ty = row * TILE_SIZE + this.offsetY;
+        ctx.fillStyle = canAfford ? 'rgba(100, 255, 100, 0.2)' : 'rgba(255, 100, 100, 0.2)';
+        ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
+        ctx.strokeStyle = canAfford ? '#44ff44' : '#ff4444';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(tx, ty, TILE_SIZE, TILE_SIZE);
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        const name = t('flower.' + v.id + '.name');
+        ctx.fillText(canAfford ? `🌻 ${name} ${v.cost}g` : t('flower.notEnoughGold'), tx + TILE_SIZE / 2, ty - 4);
+      }
     }
 
     // Draw keyboard cursor
@@ -399,8 +449,10 @@ export class GameEngine extends EventEmitter {
       if (enemy.alive) enemy.render(ctx, this.offsetX, this.offsetY);
     }
 
-    // Draw hero
-    this.hero.render(ctx, this.offsetX, this.offsetY);
+    // Draw heroes
+    for (const hero of this.heroes) {
+      if (hero.alive) hero.render(ctx, this.offsetX, this.offsetY);
+    }
 
     // Draw bullets
     this.towerManager.renderBullets(ctx, this.offsetX, this.offsetY);
@@ -423,7 +475,8 @@ export class GameEngine extends EventEmitter {
       ctx.fillText(`${t('debug.bullets', this.towerManager.bulletPool.activeCount)}`, 10, y); y += 15;
       ctx.fillText(`${t('debug.particles', this.particles._pool.activeCount)}`, 10, y); y += 15;
       ctx.fillText(`${t('debug.towers', this.towerManager.getTowers().length)}`, 10, y); y += 15;
-      ctx.fillText(t('debug.hero', this.hero.level, this.hero.alive ? t('hero.alive') : t('hero.dead')), 10, y); y += 15;
+      const aliveCount = this.heroes.filter(h => h.alive).length;
+      ctx.fillText(`${t('debug.hero', this.hero.level, this.hero.alive ? t('hero.alive') : t('hero.dead'))} (${aliveCount}/${this.heroes.length})`, 10, y); y += 15;
       ctx.fillText(t('debug.weather', `${this.weatherSystem.currentWeather.id} ${this.weatherSystem.isNight() ? t('debug.night') : t('debug.day')}`), 10, y); y += 15;
       ctx.fillText(t('debug.event', this.eventSystem.activeEvent ? this.eventSystem.activeEvent.id : t('debug.none')), 10, y); y += 15;
     }
@@ -442,6 +495,7 @@ export class GameEngine extends EventEmitter {
     this._cursorRow = -1;
     this._cursorActive = false;
     this._cursorMoveCooldown = 0;
+    this.flowerMode = false;
 
     document.addEventListener('keydown', (e) => {
       if (this._miniGameActive) return;
@@ -451,6 +505,11 @@ export class GameEngine extends EventEmitter {
         this.selectedTower = null;
         this.selectedTile = null;
         this._cursorActive = false;
+        if (this.flowerMode) {
+          this.flowerMode = false;
+          const btn = document.querySelector('#btnFlowerMode');
+          if (btn) { btn.style.background = ''; btn.style.borderColor = ''; }
+        }
       }
       if ((e.key === 'p' || e.key === 'P') && !this._miniGameActive) this.togglePause();
       if (e.key === 'Enter') {
@@ -593,6 +652,19 @@ export class GameEngine extends EventEmitter {
       return;
     }
 
+    // Check if clicking on grass tile for flower planting
+    if (this.flowerMode && this.map.getTerrain(col, row) === TERRAIN.GRASS) {
+      const existingFlower = this.flowerManager.getFlowerAt(col, row);
+      if (!existingFlower) {
+        const v = this.flowerManager.selectedVariety;
+        if (this.gold >= v.cost) {
+          this.flowerManager.plant(col, row, v.id);
+          this.audio.playBuild();
+        }
+        return;
+      }
+    }
+
     // Check if clicking on buildable tile
     if (this.map.isBuildable(col, row)) {
       this.ui.towerInfo.hide();
@@ -615,7 +687,7 @@ export class GameEngine extends EventEmitter {
     const scaleY = this.canvas.height / rect.height;
     const mx = (e.clientX - rect.left) * scaleX - this.offsetX;
     const my = (e.clientY - rect.top) * scaleY - this.offsetY;
-    this.hero.moveTo(mx, my);
+    if (this.hero.alive) this.hero.moveTo(mx, my);
   }
 
   _handleMouseMove(e) {
@@ -701,6 +773,7 @@ export class GameEngine extends EventEmitter {
     if (this._miniGameActive || this.waveManager.isActive || this.waveManager.waveInProgress) return;
     this.audio.playWaveStart();
     this.waveManager.startNextWave();
+    this.storyManager.onWaveStart(this.waveManager.currentWave);
   }
 
   _toggleLanguage() {
@@ -833,12 +906,40 @@ export class GameEngine extends EventEmitter {
     this.gold -= tmpl.cost;
     this.heroManager.ownedHeroes.push(typeId);
     this.heroManager.heroLevels[typeId] = { level: 1, xp: 0 };
-    this.heroManager.saveHeroState(this.hero);
-    this.heroManager.setHeroType(typeId);
-    this.hero.applyTemplate(tmpl);
-    this.heroManager.applyHeroState(this.hero);
     this.particles.emit(this.hero.x, this.hero.y, 30, {
       color: '#ffd700', speed: 120, size: 5, life: 700
+    });
+  }
+
+  deployHero(typeId) {
+    const tmpl = HERO_TEMPLATES[typeId];
+    if (!tmpl) return;
+    if (!this.heroManager.ownedHeroes.includes(typeId)) return;
+    if (!this.heroManager.addDeployed(typeId)) return;
+    const hero = new Hero();
+    hero.init(this.map, tmpl);
+    hero.x = this.hero.x + (this.heroes.length * 40);
+    hero.y = this.hero.y + 30;
+    this.heroManager.applyHeroStateById(hero, typeId);
+    hero.alive = true;
+    this.heroes.push(hero);
+    this.particles.emit(hero.x, hero.y, 20, {
+      color: '#66ff66', speed: 100, size: 4, life: 500
+    });
+  }
+
+  undeployHero(typeId) {
+    if (!this.heroManager.removeDeployed(typeId)) return;
+    const idx = this.heroes.findIndex(h => {
+      const tpl = h._template || {};
+      return tpl.id === typeId && h !== this.hero;
+    });
+    if (idx > 0) {
+      this.heroManager.saveHeroState(this.heroes[idx]);
+      this.heroes.splice(idx, 1);
+    }
+    this.particles.emit(this.hero.x, this.hero.y, 15, {
+      color: '#ff6666', speed: 80, size: 3, life: 400
     });
   }
 
@@ -851,14 +952,20 @@ export class GameEngine extends EventEmitter {
     this.heroManager.weaponInventory.push(weaponId);
   }
 
+  _recalcAllHeroes() {
+    for (const h of this.heroes) {
+      h.equippedWeapons = [...this.heroManager.equippedWeapons];
+      h.recalc();
+    }
+  }
+
   equipWeapon(weaponId) {
     if (!this.heroManager.weaponInventory.includes(weaponId)) return;
     if (this.heroManager.equippedWeapons.includes(weaponId)) return;
     if (this.heroManager.equippedWeapons.length >= 3) return;
     this.heroManager.equippedWeapons.push(weaponId);
     this.heroManager.saveHeroState(this.hero);
-    this.hero.equippedWeapons = [...this.heroManager.equippedWeapons];
-    this.hero.recalc();
+    this._recalcAllHeroes();
   }
 
   unequipWeapon(weaponId) {
@@ -866,8 +973,7 @@ export class GameEngine extends EventEmitter {
     if (idx === -1) return;
     this.heroManager.equippedWeapons.splice(idx, 1);
     this.heroManager.saveHeroState(this.hero);
-    this.hero.equippedWeapons = [...this.heroManager.equippedWeapons];
-    this.hero.recalc();
+    this._recalcAllHeroes();
   }
 
   onWaveComplete(wave, reward, perfect) {
@@ -935,11 +1041,13 @@ export class GameEngine extends EventEmitter {
     this.waveManager = new WaveManager(this.enemyManager, this);
 
     this.hero = new Hero();
+    this.heroes = [this.hero];
     this.hero.init(this.map);
     this.factionSystem = new FactionSystem(this);
     this.eventSystem = new EventSystem(this);
     this.storyManager = new StoryManager(this);
     this.weatherSystem = new WeatherSystem(this);
+    this.flowerManager = new FlowerManager(this);
 
     this.stats = {
       totalKills: 0,
@@ -979,7 +1087,8 @@ export class GameEngine extends EventEmitter {
       towersBuilt: this.stats.towersBuilt,
       goldEarned: this.stats.totalGoldEarned,
       isPaused: this.paused,
-      isGameOver: this.gameOver
+      isGameOver: this.gameOver,
+      flowerCount: this.flowerManager.getCount()
     };
   }
 
@@ -1043,6 +1152,12 @@ export class GameEngine extends EventEmitter {
         speed: this.hero.speed,
         moveTarget: this.hero._moveTarget
       },
+      additionalHeroes: this.heroes.filter(h => h !== this.hero).map(h => ({
+        typeId: h._template ? h._template.id : 'scout',
+        level: h.level, xp: h.xp,
+        hp: h.hp, maxHp: h.maxHp,
+        alive: h.alive, x: h.x, y: h.y,
+      })),
       event: {
         activeEvent: this.eventSystem.activeEvent,
         activeDuration: this.eventSystem.activeDuration,
@@ -1056,7 +1171,8 @@ export class GameEngine extends EventEmitter {
         dayNightWaveCounter: this.weatherSystem.dayNightWaveCounter
       },
       heroManager: this.heroManager.toJSON(),
-      unlockedTowers: Array.from(this.unlockedTowers)
+      unlockedTowers: Array.from(this.unlockedTowers),
+      flowers: this.flowerManager.toJSON()
     };
   }
 
@@ -1086,6 +1202,7 @@ export class GameEngine extends EventEmitter {
     }
     const tmpl = HERO_TEMPLATES[this.heroManager.currentHeroType] || HERO_TEMPLATES.scout;
     this.hero = new Hero();
+    this.heroes = [this.hero];
     this.hero.init(this.map, tmpl);
     this.heroManager.applyHeroState(this.hero);
     if (state.hero) {
@@ -1095,10 +1212,28 @@ export class GameEngine extends EventEmitter {
       this.hero.alive = state.hero.alive !== false;
       this.hero.angle = state.hero.angle || 0;
     }
+    if (state.additionalHeroes) {
+      for (const hData of state.additionalHeroes) {
+        const hTmpl = HERO_TEMPLATES[hData.typeId] || HERO_TEMPLATES.scout;
+        const h = new Hero();
+        h.init(this.map, hTmpl);
+        this.heroManager.applyHeroStateById(h, hData.typeId);
+        h.x = hData.x || this.hero.x;
+        h.y = hData.y || this.hero.y;
+        h.hp = hData.hp || h.maxHp;
+        h.alive = hData.alive !== false;
+        this.heroes.push(h);
+      }
+    }
     this.factionSystem = new FactionSystem(this);
     this.eventSystem = new EventSystem(this);
     this.storyManager = new StoryManager(this);
     this.weatherSystem = new WeatherSystem(this);
+    this.flowerManager = new FlowerManager(this);
+
+    if (state.flowers) {
+      this.flowerManager.fromJSON(state.flowers);
+    }
 
     if (state.story) {
       this.storyManager.fromJSON(state.story);

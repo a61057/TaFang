@@ -1,5 +1,6 @@
 import { t } from '../config/locale.js';
 import { HERO_REVIVE_COST } from '../config/constants.js';
+import { FLOWER_VARIETIES } from '../managers/FlowerManager.js';
 
 export class HUD {
   constructor(gameEngine) {
@@ -40,6 +41,10 @@ export class HUD {
             <span class="hud-label">${t('hud.lives')}</span>
             <span class="hud-value" id="livesDisplay">20</span>
           </div>
+          <div class="hud-item flower-info">
+            <span class="hud-label">🌸</span>
+            <span class="hud-value" id="flowerCount">0</span>
+          </div>
         </div>
       </div>
       <div class="hud-bottom">
@@ -51,6 +56,7 @@ export class HUD {
           <button class="hud-btn" id="btnLoad" title="${t('hud.load')}">${t('hud.load')}</button>
           <button class="hud-btn" id="btnHeroPanel" title="${t('hero.panel')}">${t('hero.panel')}</button>
           <button class="hud-btn" id="btnSettings" title="${t('hud.settings')}">${t('hud.settings')}</button>
+          <button class="hud-btn" id="btnFlowerMode" title="${t('flower.plantCost')}">🌻 ${t('flower.plant')}</button>
           <button class="hud-btn" id="btnReviveHero" title="${t('hud.reviveHero')}" style="display:none;">${t('hud.reviveHero')}</button>
         </div>
         <div class="hud-prep-info" id="prepInfo">
@@ -71,9 +77,20 @@ export class HUD {
     this.prepInfo = this.element.querySelector('#prepInfo');
     this.fpsDisplay = this.element.querySelector('#fpsDisplay');
     this.heroDisplay = this.element.querySelector('#heroDisplay');
+    this.flowerCount = this.element.querySelector('#flowerCount');
     this.weatherDisplay = this.element.querySelector('#weatherDisplay');
     this.eventDisplay = this.element.querySelector('#eventDisplay');
     this.reviveBtn = this.element.querySelector('#btnReviveHero');
+    this.flowerBtn = this.element.querySelector('#btnFlowerMode');
+
+    this.flowerBtn.addEventListener('click', () => {
+      if (this.engine.flowerMode) {
+        this.engine.flowerManager.cycleVariety();
+      } else {
+        this.engine.flowerMode = true;
+      }
+      this._updateFlowerBtn();
+    });
 
     this.element.querySelector('#btnStartWave').addEventListener('click', () => {
       this.engine.startNextWave();
@@ -139,12 +156,15 @@ export class HUD {
     this.enemyCount.textContent = state.enemyCount;
     this.goldDisplay.textContent = state.gold;
     this.livesDisplay.textContent = state.lives;
+    this.flowerCount.textContent = state.flowerCount || 0;
+    this._updateFlowerBtn();
     this.fpsDisplay.textContent = t('hud.fps', state.fps);
 
     if (this.engine.hero) {
       const h = this.engine.hero;
       const typeName = h._template ? t(h._template.nameKey) : '';
-      this.heroDisplay.textContent = `${typeName} ${t('hero.level', h.level)} ${h.alive ? t('hero.alive') : t('hero.dead')}`;
+      const deployedStr = this.engine.heroes ? `[${this.engine.heroes.filter(hh => hh.alive).length}/${this.engine.heroManager.maxHeroSlots}]` : '';
+      this.heroDisplay.textContent = `${typeName} ${t('hero.level', h.level)} ${deployedStr} ${h.alive ? t('hero.alive') : t('hero.dead')}`;
       this.reviveBtn.style.display = (!h.alive && this.engine.gold >= HERO_REVIVE_COST) ? 'inline-block' : 'none';
     }
 
@@ -176,6 +196,23 @@ export class HUD {
     const startBtn = this.element.querySelector('#btnStartWave');
     startBtn.disabled = state.waveInProgress || state.isPrepping;
     startBtn.textContent = state.waveInProgress ? t('hud.inProgress') : t('hud.nextWave');
+  }
+
+  _updateFlowerBtn() {
+    if (!this.engine.flowerManager) return;
+    const v = this.engine.flowerManager.selectedVariety;
+    const name = t('flower.' + v.id + '.name');
+    if (this.engine.flowerMode) {
+      this.flowerBtn.textContent = `🌻 ${name} (${v.cost}g)`;
+      this.flowerBtn.title = t('flower.clickCycle');
+      this.flowerBtn.style.background = 'rgba(255, 200, 100, 0.25)';
+      this.flowerBtn.style.borderColor = '#ffdd44';
+    } else {
+      this.flowerBtn.textContent = `🌻 ${t('flower.plant')}`;
+      this.flowerBtn.title = t('flower.plantCost');
+      this.flowerBtn.style.background = '';
+      this.flowerBtn.style.borderColor = '';
+    }
   }
 
   toggleFps(show) {

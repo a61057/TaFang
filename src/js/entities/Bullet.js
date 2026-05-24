@@ -17,6 +17,8 @@ export class Bullet {
     this.slowDuration = 0;
     this.burnDamage = 5;
     this.burnDuration = 3000;
+    this.poisonDamage = 15;
+    this.poisonDuration = 4000;
     this.chainCount = 0;
     this.chainRange = 0;
     this.arc = false;
@@ -48,6 +50,8 @@ export class Bullet {
     this.slowDuration = stats.slowDuration || 0;
     this.burnDamage = stats.burnDamage || 5;
     this.burnDuration = stats.burnDuration || 3000;
+    this.poisonDamage = stats.poisonDamage || 0;
+    this.poisonDuration = stats.poisonDuration || 0;
     this.chainCount = stats.chainCount || 0;
     this.chainRange = stats.chainRange || 0;
     this.arc = stats.arc || false;
@@ -139,6 +143,9 @@ export class Bullet {
     }
     if (this.effect === 'burn' && enemy.alive) {
       enemy.addStatusEffect('burn', this.burnDamage || 5, this.burnDuration || 3000);
+    }
+    if (this.effect === 'poison' && enemy.alive) {
+      enemy.addStatusEffect('poison', this.poisonDamage || 15, this.poisonDuration || 4000);
     }
   }
 

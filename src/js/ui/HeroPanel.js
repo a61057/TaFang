@@ -58,13 +58,37 @@ export class HeroPanel {
   _renderHeroes() {
     const container = this.element.querySelector('#heroTabContent');
     const mgr = this.engine.heroManager;
-    let html = '';
+    const maxSlots = mgr.maxHeroSlots;
+    const deployedCount = mgr.deployedHeroes.length;
+
+    let html = `
+      <div class="hero-slot-bar">
+        <span class="hero-slot-count">${t('hero.slots', deployedCount, maxSlots)}</span>
+        ${maxSlots < 4 ? `<button class="hero-btn upgrade-slot-btn" id="btnUpgradeSlot">${t('hero.upgradeSlots', mgr.getSlotUpgradeCost())}</button>` : '<span class="hero-slot-max">MAX</span>'}
+      </div>
+    `;
+
     for (const [id, tmpl] of Object.entries(HERO_TEMPLATES)) {
       const owned = mgr.ownedHeroes.includes(id);
-      const active = mgr.currentHeroType === id;
+      const isPlayer = mgr.currentHeroType === id;
+      const deployed = mgr.isDeployed(id);
+
+      let actionHtml = '';
+      if (isPlayer && deployed) {
+        actionHtml = '<span class="hero-badge">✓</span>';
+      } else if (deployed) {
+        actionHtml = `<button class="hero-btn unequip-btn" data-id="${id}" data-action="undeploy">${t('hero.undeploy')}</button>`;
+      } else if (owned && mgr.canDeploy()) {
+        actionHtml = `<button class="hero-btn equip-btn" data-id="${id}" data-action="deploy">${t('hero.deploy')}</button>`;
+      } else if (owned) {
+        actionHtml = `<span class="hero-badge" style="color:#667">${t('hero.slotFull')}</span>`;
+      } else {
+        actionHtml = `<button class="hero-btn recruit-btn" data-id="${id}" data-action="recruit">${t('hero.recruit')} (${tmpl.cost}g)</button>`;
+      }
+
       const data = mgr.heroLevels[id] || { level: 1, xp: 0 };
       html += `
-        <div class="hero-card ${active ? 'active' : ''}">
+        <div class="hero-card ${isPlayer ? 'active' : ''}">
           <div class="hero-card-color" style="background:${tmpl.color}"></div>
           <div class="hero-card-info">
             <div class="hero-card-name">${t(tmpl.nameKey)}</div>
@@ -75,28 +99,41 @@ export class HeroPanel {
             ${owned ? `<div class="hero-card-level">Lv.${data.level} XP:${data.xp}/100</div>` : ''}
           </div>
           <div class="hero-card-action">
-            ${active ? '<span class="hero-badge">✓</span>' :
-              owned ? `<button class="hero-btn switch-btn" data-id="${id}">${t('hero.switch')}</button>` :
-              `<button class="hero-btn recruit-btn" data-id="${id}">${t('hero.recruit')} (${tmpl.cost}g)</button>`}
+            ${actionHtml}
           </div>
         </div>
       `;
     }
     container.innerHTML = html;
 
-    container.querySelectorAll('.switch-btn').forEach(btn => {
+    container.querySelectorAll('[data-action="deploy"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.engine.switchHero(btn.dataset.id);
+        this.engine.deployHero(btn.dataset.id);
         this._renderHeroes();
       });
     });
 
-    container.querySelectorAll('.recruit-btn').forEach(btn => {
+    container.querySelectorAll('[data-action="undeploy"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.engine.undeployHero(btn.dataset.id);
+        this._renderHeroes();
+      });
+    });
+
+    container.querySelectorAll('[data-action="recruit"]').forEach(btn => {
       btn.addEventListener('click', () => {
         this.engine.recruitHero(btn.dataset.id);
         this._renderHeroes();
       });
     });
+
+    const upgradeBtn = container.querySelector('#btnUpgradeSlot');
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener('click', () => {
+        this.engine.heroManager.upgradeMaxSlots();
+        this._renderHeroes();
+      });
+    }
   }
 
   _renderWeapons() {

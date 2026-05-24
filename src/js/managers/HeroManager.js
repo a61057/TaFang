@@ -8,6 +8,8 @@ export class HeroManager {
     this.heroLevels = { scout: { level: 1, xp: 0 } };
     this.weaponInventory = [];
     this.equippedWeapons = [];
+    this.maxHeroSlots = 1;
+    this.deployedHeroes = ['scout'];
   }
 
   setHeroType(typeId) {
@@ -38,13 +40,60 @@ export class HeroManager {
     if (hero.hp > hero.maxHp) hero.hp = hero.maxHp;
   }
 
+  applyHeroStateById(hero, typeId) {
+    if (!hero || !typeId) return;
+    const data = this.heroLevels[typeId] || { level: 1, xp: 0 };
+    hero.level = data.level;
+    hero.xp = data.xp;
+    hero.equippedWeapons = [...this.equippedWeapons];
+    hero.recalc();
+    if (hero.hp > hero.maxHp) hero.hp = hero.maxHp;
+  }
+
+  getSlotUpgradeCost() {
+    return this.maxHeroSlots * 300;
+  }
+
+  upgradeMaxSlots() {
+    if (this.maxHeroSlots >= 4) return false;
+    const cost = this.getSlotUpgradeCost();
+    if (this.engine.gold < cost) return false;
+    this.engine.gold -= cost;
+    this.maxHeroSlots++;
+    return true;
+  }
+
+  canDeploy() {
+    return this.deployedHeroes.length < this.maxHeroSlots;
+  }
+
+  isDeployed(typeId) {
+    return this.deployedHeroes.includes(typeId);
+  }
+
+  addDeployed(typeId) {
+    if (this.deployedHeroes.includes(typeId)) return false;
+    if (this.deployedHeroes.length >= this.maxHeroSlots) return false;
+    this.deployedHeroes.push(typeId);
+    return true;
+  }
+
+  removeDeployed(typeId) {
+    const idx = this.deployedHeroes.indexOf(typeId);
+    if (idx <= 0) return false;
+    this.deployedHeroes.splice(idx, 1);
+    return true;
+  }
+
   toJSON() {
     return {
       ownedHeroes: this.ownedHeroes,
       currentHeroType: this.currentHeroType,
       heroLevels: this.heroLevels,
       weaponInventory: this.weaponInventory,
-      equippedWeapons: this.equippedWeapons
+      equippedWeapons: this.equippedWeapons,
+      maxHeroSlots: this.maxHeroSlots,
+      deployedHeroes: this.deployedHeroes,
     };
   }
 
@@ -55,5 +104,7 @@ export class HeroManager {
     if (data.heroLevels) this.heroLevels = data.heroLevels;
     if (data.weaponInventory) this.weaponInventory = data.weaponInventory;
     if (data.equippedWeapons) this.equippedWeapons = data.equippedWeapons;
+    if (data.maxHeroSlots !== undefined) this.maxHeroSlots = data.maxHeroSlots;
+    if (data.deployedHeroes) this.deployedHeroes = data.deployedHeroes;
   }
 }

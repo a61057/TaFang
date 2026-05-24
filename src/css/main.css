@@ -765,6 +765,36 @@ html, body {
   transition: all 0.12s;
 }
 .hero-btn:hover { background: rgba(255,255,255,0.18); }
+
+.hero-slot-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+}
+
+.hero-slot-count {
+  font-size: 13px;
+  color: #dde;
+  font-weight: 600;
+}
+
+.hero-slot-max {
+  font-size: 12px;
+  color: #ffd700;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.upgrade-slot-btn {
+  border-color: rgba(255,215,0,0.3);
+  color: #ffd700;
+  font-size: 11px;
+}
 .switch-btn { border-color: rgba(74,144,217,0.3); color: #4a90d9; }
 .recruit-btn { border-color: rgba(255,215,0,0.3); color: #ffd700; }
 .buy-btn { border-color: rgba(255,215,0,0.3); color: #ffd700; }

@@ -150,7 +150,9 @@ export class Tower {
       slowAmount: this.stats.slowAmount || 0,
       slowDuration: this.stats.slowDuration || 0,
       burnDamage: this.stats.burnDamage || 5,
-      burnDuration: this.stats.burnDuration || 3000
+      burnDuration: this.stats.burnDuration || 3000,
+      poisonDamage: this.stats.poisonDamage || 0,
+      poisonDuration: this.stats.poisonDuration || 0
     };
   }
 
@@ -422,6 +424,70 @@ export class Tower {
         ctx.moveTo(x - 8, y - 4);
         ctx.quadraticCurveTo(x - 6, y - 10, x, y - 8);
         ctx.stroke();
+        break;
+      }
+      case 'INSECTICIDE': {
+        // Chemical tank
+        ctx.fillStyle = '#2a4a2a';
+        ctx.fillRect(x - 14, y - 6, 28, 18);
+        ctx.fillStyle = '#3a6a3a';
+        ctx.fillRect(x - 12, y - 4, 24, 14);
+        // Liquid level
+        const liquidH = 8 + Math.sin(Date.now() / 500) * 2;
+        ctx.fillStyle = '#44ff44';
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(x - 10, y + 6 - liquidH, 20, liquidH);
+        ctx.globalAlpha = 1;
+        // Tank lines
+        ctx.strokeStyle = '#2a5a2a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - 14, y - 6, 28, 18);
+        ctx.strokeRect(x - 12, y - 4, 24, 14);
+        // Nozzle
+        ctx.save();
+        ctx.translate(x + 4, y - 4);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = '#444';
+        ctx.fillRect(0, -3, 20, 6);
+        ctx.fillStyle = '#666';
+        ctx.fillRect(16, -4, 6, 8);
+        ctx.fillStyle = '#222';
+        ctx.fillRect(20, -5, 4, 10);
+        // Spray effect when targeting
+        if (this.target) {
+          ctx.fillStyle = '#66ff66';
+          ctx.globalAlpha = 0.3 + Math.sin(Date.now() / 100) * 0.15;
+          ctx.shadowColor = '#66ff66';
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(28, 0, 5 + Math.sin(Date.now() / 80) * 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+        // Skull icon
+        ctx.fillStyle = '#44ff44';
+        ctx.globalAlpha = 0.6;
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('☠', x, y - 10);
+        ctx.globalAlpha = 1;
+        // Base plate
+        ctx.fillStyle = '#2a3a2a';
+        ctx.fillRect(x - 16, y + 10, 32, 5);
+        ctx.fillStyle = '#3a4a3a';
+        ctx.fillRect(x - 14, y + 8, 28, 4);
+        // Drip effect
+        ctx.fillStyle = '#66ff66';
+        ctx.globalAlpha = 0.2 + Math.sin(Date.now() / 200) * 0.1;
+        ctx.beginPath();
+        ctx.arc(x - 8, y + 14, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 6, y + 15, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
         break;
       }
       case 'ARC': {

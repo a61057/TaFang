@@ -125,6 +125,23 @@ export const TOWER_TYPES = {
     bulletColor: '#44ffcc',
     bulletSpeed: 9999,
     bulletSize: 2
+  },
+  INSECTICIDE: {
+    id: 'insecticide',
+    name: 'Pesticide',
+    description: 'Sprays poisonous insecticide, area damage over time',
+    color: '#44cc44',
+    faction: 'undead',
+    unlockCost: 1000,
+    levels: [
+      { cost: 500, damage: 40, fireRate: 0.8, range: 140, splash: 50, poisonDamage: 15, poisonDuration: 4000 },
+      { cost: 400, damage: 70, fireRate: 0.7, range: 150, splash: 60, poisonDamage: 25, poisonDuration: 4500 },
+      { cost: 600, damage: 110, fireRate: 0.6, range: 160, splash: 70, poisonDamage: 40, poisonDuration: 5000 }
+    ],
+    bulletColor: '#66ff66',
+    bulletSpeed: 400,
+    bulletSize: 8,
+    effect: 'poison'
   }
 };
 

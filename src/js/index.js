@@ -245,7 +245,7 @@ function initSettingsWindow() {
 
   document.getElementById('btnSettingsClose').addEventListener('click', () => {
     if (window.electronAPI) window.electronAPI.close();
-    else app.style.display = 'none';
+    else window.location.href = window.location.href.replace('#settings', '');
   });
 
   function refreshSettingsLabels() {
@@ -349,7 +349,7 @@ function initAchievementsWindow() {
 
   document.getElementById('btnAchClose').addEventListener('click', () => {
     if (window.electronAPI) window.electronAPI.close();
-    else app.style.display = 'none';
+    else window.location.href = window.location.href.replace('#achievements', '');
   });
 }
 

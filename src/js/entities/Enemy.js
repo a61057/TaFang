@@ -3,7 +3,8 @@ import { TILE_SIZE } from '../config/constants.js';
 const STATUS_EFFECTS = {
   SLOW: { color: '#66ccff', label: 'Slow' },
   BURN: { color: '#ff6644', label: 'Burn' },
-  STUN: { color: '#ffff00', label: 'Stun' }
+  STUN: { color: '#ffff00', label: 'Stun' },
+  POISON: { color: '#44ff44', label: 'Poison' }
 };
 
 export class Enemy {
@@ -139,6 +140,9 @@ export class Enemy {
       if (effect.type === 'slow') speedMultiplier *= (1 - effect.amount);
       if (effect.type === 'stun') speedMultiplier = 0;
       if (effect.type === 'burn') {
+        this.takeDamage(effect.amount * dt, false);
+      }
+      if (effect.type === 'poison') {
         this.takeDamage(effect.amount * dt, false);
       }
     }
@@ -397,7 +401,8 @@ export class Enemy {
     for (const effect of this.statusEffects) {
       const ec = effect.type === 'slow' ? '#66ccff' :
                  effect.type === 'burn' ? '#ff6644' :
-                 effect.type === 'stun' ? '#ffff00' : '#fff';
+                 effect.type === 'stun' ? '#ffff00' :
+                 effect.type === 'poison' ? '#44ff44' : '#fff';
       ctx.strokeStyle = ec;
       ctx.lineWidth = 2;
       ctx.beginPath();
