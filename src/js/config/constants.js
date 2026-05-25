@@ -31,13 +31,14 @@ export const TERRAIN_COLORS = {
 };
 
 // Economy
-export const STARTING_GOLD = 200;
+export const STARTING_GOLD = 300;
 export const STARTING_LIVES = 20;
 export const SELL_REFUND_RATE = 0.7;
 
 // Wave settings
 export const PREP_TIME = 15;
-export const WAVE_BASE_REWARD = 50;
+export const WAVE_BASE_REWARD = 80;
+export const PER_WAVE_REWARD = 15;
 export const BOSS_INTERVAL = 5;
 
 // Game speeds

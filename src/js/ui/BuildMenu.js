@@ -47,12 +47,28 @@ export class BuildMenu {
     if (left < 10) left = 10;
     if (top < 10) top = 10;
     if (left + 160 > window.innerWidth - 10) left = window.innerWidth - 170;
+    if (top > window.innerHeight - 100) top = window.innerHeight - 110;
 
     this.element.style.left = left + 'px';
     this.element.style.top = top + 'px';
     this.element.style.display = 'block';
 
     this.optionsContainer.innerHTML = '';
+    // Workbench assemble button
+    const assembleBtn = document.createElement('button');
+    assembleBtn.className = 'build-btn assemble-btn';
+    assembleBtn.innerHTML = `
+      <span class="tower-name">🔧 ${t('workbench.assemble')}</span>
+      <span class="tower-desc">${t('workbench.assembleDesc')}</span>
+    `;
+    assembleBtn.addEventListener('click', () => {
+      this.engine.showWorkbench();
+    });
+    this.optionsContainer.appendChild(assembleBtn);
+    const divider = document.createElement('div');
+    divider.className = 'build-divider';
+    this.optionsContainer.appendChild(divider);
+
     for (const key of TOWER_KEYS) {
       const type = TOWER_TYPES[key];
       const unlocked = this.engine.isTowerUnlocked(key);

@@ -2,20 +2,20 @@ import { TILE_SIZE, TERRAIN } from '../config/constants.js';
 import { t } from '../config/locale.js';
 
 export const FLOWER_VARIETIES = [
-  { id: 'daisy',    cost: 30,  income: 1,  interval: 2000, petals: 8,  petalR: 3,   color: '#ffffff', center: '#ffdd44', stem: '#3a7a3a' },
-  { id: 'rose',     cost: 50,  income: 2,  interval: 2000, petals: 6,  petalR: 4.5, color: '#ff4466', center: '#ffdd44', stem: '#2a6a2a' },
-  { id: 'tulip',    cost: 100, income: 5,  interval: 2000, petals: 3,  petalR: 5,   color: '#ff88cc', center: '#ffaa44', stem: '#3a7a3a' },
-  { id: 'sunflower',cost: 200, income: 12, interval: 2000, petals: 10, petalR: 5,   color: '#ffcc33', center: '#8B4513', stem: '#2a6a2a' },
-  { id: 'orchid',   cost: 400, income: 30, interval: 2000, petals: 5,  petalR: 5,   color: '#aa66ff', center: '#ffdd44', stem: '#4a8a4a' },
+  { id: 'daisy',    cost: 30,  sellPrice: 45,  petals: 8,  petalR: 3,   color: '#ffffff', center: '#ffdd44', stem: '#3a7a3a' },
+  { id: 'rose',     cost: 50,  sellPrice: 75,  petals: 6,  petalR: 4.5, color: '#ff4466', center: '#ffdd44', stem: '#2a6a2a' },
+  { id: 'tulip',    cost: 100, sellPrice: 150, petals: 3,  petalR: 5,   color: '#ff88cc', center: '#ffaa44', stem: '#3a7a3a' },
+  { id: 'sunflower',cost: 200, sellPrice: 300, petals: 10, petalR: 5,   color: '#ffcc33', center: '#8B4513', stem: '#2a6a2a' },
+  { id: 'orchid',   cost: 400, sellPrice: 600, petals: 5,  petalR: 5,   color: '#aa66ff', center: '#ffdd44', stem: '#4a8a4a' },
 ];
+
+const MATURE_WAVES = 3;
 
 export class FlowerManager {
   constructor(gameEngine) {
     this.engine = gameEngine;
     this.map = gameEngine.map;
     this.flowers = new Map();
-    this._incomeAccum = 0;
-    this._goldPopups = [];
     this.selectedVarietyIdx = 0;
   }
 
@@ -45,12 +45,39 @@ export class FlowerManager {
       x: col * TILE_SIZE + TILE_SIZE / 2,
       y: row * TILE_SIZE + TILE_SIZE / 2,
       phase: Math.random() * Math.PI * 2,
-      varietyId: v.id
+      varietyId: v.id,
+      plantedAtWave: this.engine.waveManager.currentWave
     });
     this.engine.particles.emit(
       col * TILE_SIZE + TILE_SIZE / 2,
       row * TILE_SIZE + TILE_SIZE / 2,
       10, { color: v.color, speed: 60, size: 3, life: 400 }
+    );
+    return true;
+  }
+
+  isMature(col, row) {
+    const f = this.flowers.get(`${col},${row}`);
+    if (!f) return false;
+    const currentWave = this.engine.waveManager.currentWave;
+    return currentWave >= f.plantedAtWave + MATURE_WAVES;
+  }
+
+  getRemainingWaves(col, row) {
+    const f = this.flowers.get(`${col},${row}`);
+    if (!f) return 0;
+    return f.plantedAtWave + MATURE_WAVES - this.engine.waveManager.currentWave;
+  }
+
+  sell(col, row) {
+    const f = this.flowers.get(`${col},${row}`);
+    if (!f || !this.isMature(col, row)) return false;
+    const v = FLOWER_VARIETIES.find(vv => vv.id === f.varietyId) || FLOWER_VARIETIES[0];
+    this.engine.addGold(v.sellPrice);
+    this.flowers.delete(`${col},${row}`);
+    this.engine.particles.emit(
+      f.x, f.y,
+      15, { color: '#ffdd44', speed: 80, size: 4, life: 500 }
     );
     return true;
   }
@@ -67,6 +94,16 @@ export class FlowerManager {
     return this.flowers.size;
   }
 
+  getMatureCount() {
+    let count = 0;
+    for (const f of this.flowers.values()) {
+      if (this.engine.waveManager.currentWave >= f.plantedAtWave + MATURE_WAVES) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   getVariety(col, row) {
     const f = this.flowers.get(`${col},${row}`);
     if (!f) return null;
@@ -74,32 +111,6 @@ export class FlowerManager {
   }
 
   update(dt) {
-    if (this.flowers.size === 0) return;
-    this._incomeAccum += dt * 1000;
-    if (this._incomeAccum >= 2000) {
-      this._incomeAccum -= 2000;
-      for (const flower of this.flowers.values()) {
-        const v = FLOWER_VARIETIES.find(vv => vv.id === flower.varietyId) || FLOWER_VARIETIES[0];
-        const income = v.income;
-        this.engine.addGold(income);
-        this._goldPopups.push({
-          x: flower.x,
-          y: flower.y - 10,
-          text: `+${income}`,
-          life: 1000,
-          vy: -40,
-          color: v.color
-        });
-      }
-    }
-    for (let i = this._goldPopups.length - 1; i >= 0; i--) {
-      const p = this._goldPopups[i];
-      p.life -= dt * 1000;
-      p.y += p.vy * dt;
-      if (p.life <= 0) {
-        this._goldPopups.splice(i, 1);
-      }
-    }
   }
 
   render(ctx, offsetX = 0, offsetY = 0) {
@@ -109,6 +120,7 @@ export class FlowerManager {
       const x = flower.x + offsetX;
       const y = flower.y + offsetY;
       const sway = Math.sin(time * 2 + flower.phase) * 2;
+      const mature = this.isMature(flower.col, flower.row);
 
       ctx.save();
 
@@ -162,26 +174,24 @@ export class FlowerManager {
         ctx.fill();
       }
 
+      if (mature) {
+        ctx.fillStyle = '#ffdd44';
+        ctx.globalAlpha = 0.6 + Math.sin(time * 4) * 0.3;
+        ctx.font = 'bold 7px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('💰', x + sway, y - 8);
+      }
+
       ctx.restore();
     }
-
-    ctx.save();
-    for (const p of this._goldPopups) {
-      ctx.globalAlpha = p.life / 1000;
-      ctx.fillStyle = p.color || '#ffdd44';
-      ctx.font = 'bold 11px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(p.text, p.x + offsetX, p.y + offsetY);
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
   }
 
   toJSON() {
     return {
       selectedVarietyIdx: this.selectedVarietyIdx,
       flowers: Array.from(this.flowers.values()).map(f => ({
-        col: f.col, row: f.row, phase: f.phase, varietyId: f.varietyId
+        col: f.col, row: f.row, phase: f.phase, varietyId: f.varietyId,
+        plantedAtWave: f.plantedAtWave
       }))
     };
   }
@@ -197,7 +207,8 @@ export class FlowerManager {
             x: f.col * TILE_SIZE + TILE_SIZE / 2,
             y: f.row * TILE_SIZE + TILE_SIZE / 2,
             phase: f.phase || Math.random() * Math.PI * 2,
-            varietyId: f.varietyId || 'rose'
+            varietyId: f.varietyId || 'rose',
+            plantedAtWave: f.plantedAtWave || 0
           });
         }
       }

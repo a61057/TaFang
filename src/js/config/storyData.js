@@ -1,5 +1,15 @@
 export const STORY_SCENES = [
   {
+    wave: 0,
+    dialogues: [
+      { speaker: 'commander', side: 'ally', textKey: 'story.tutorial_1' },
+      { speaker: 'commander', side: 'ally', textKey: 'story.tutorial_2' },
+      { speaker: 'commander', side: 'ally', textKey: 'story.tutorial_3' },
+      { speaker: 'commander', side: 'ally', textKey: 'story.tutorial_4' },
+      { speaker: 'commander', side: 'ally', textKey: 'story.tutorial_5' },
+    ]
+  },
+  {
     wave: 1,
     dialogues: [
       { speaker: 'commander', side: 'ally', textKey: 'story.wave_1_1' },

@@ -15,6 +15,7 @@ import { StoryManager } from '../managers/StoryManager.js';
 import { WeatherSystem } from '../managers/WeatherSystem.js';
 import { FlowerManager, FLOWER_VARIETIES } from '../managers/FlowerManager.js';
 import { HeroPanel } from '../ui/HeroPanel.js';
+import { WorkbenchPanel } from '../ui/WorkbenchPanel.js';
 import { TOWER_TYPES } from '../config/towerData.js';
 import { HERO_TEMPLATES, WEAPONS } from '../config/heroData.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
@@ -109,6 +110,7 @@ export class GameEngine extends EventEmitter {
 
     this.ui = new UIManager(this);
     this.heroPanel = new HeroPanel(this);
+    this.workbenchPanel = new WorkbenchPanel(this);
     this.audio.init();
     this._loadSettings();
     this._loadLanguage();
@@ -155,12 +157,14 @@ export class GameEngine extends EventEmitter {
     if (this.running) return;
     this.running = true;
     this.lastFrameTime = performance.now();
+    this.audio.startBGM();
     this._gameLoop(this.lastFrameTime);
   }
 
   startGame(mode) {
     this.gameMode = mode;
     this.victoryShown = false;
+    document.getElementById('gameContainer').style.display = '';
     if (mode === 'endless') {
       this.waveManager.totalWaves = Infinity;
       this.waveManager.isInfinite = true;
@@ -169,6 +173,9 @@ export class GameEngine extends EventEmitter {
       this.waveManager.isInfinite = false;
     }
     this.start();
+    if (mode === 'campaign') {
+      this.storyManager.onWaveStart(0);
+    }
   }
 
   _gameLoop(timestamp) {
@@ -192,6 +199,7 @@ export class GameEngine extends EventEmitter {
       this._update(dt);
     }
 
+    this.audio.updateBGM(rawDt);
     this._render();
     this.ui.update();
 
@@ -502,6 +510,7 @@ export class GameEngine extends EventEmitter {
       if (e.key === 'Escape') {
         this.ui.buildMenu.hide();
         this.ui.towerInfo.hide();
+        this.ui.flowerPopup.hide();
         this.selectedTower = null;
         this.selectedTile = null;
         this._cursorActive = false;
@@ -535,6 +544,16 @@ export class GameEngine extends EventEmitter {
       // L 切换语言
       if ((e.key === 'l' || e.key === 'L') && !e.ctrlKey && !e.metaKey) {
         this._toggleLanguage();
+      }
+
+      // M 回主菜单并自动存档
+      if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        this.saveGame(0);
+        this.audio.stopBGM();
+        this.running = false;
+        document.getElementById('gameContainer').style.display = 'none';
+        this.mainMenu.show();
       }
 
       // A+B 测试模式
@@ -646,27 +665,33 @@ export class GameEngine extends EventEmitter {
     const existingTower = this.towerManager.getTowerAt(col, row);
     if (existingTower) {
       this.ui.buildMenu.hide();
+      this.ui.flowerPopup.hide();
       this.selectedTower = existingTower;
       this.selectedTile = { col, row };
       this.ui.towerInfo.show(existingTower);
       return;
     }
 
-    // Check if clicking on grass tile for flower planting
-    if (this.flowerMode && this.map.getTerrain(col, row) === TERRAIN.GRASS) {
-      const existingFlower = this.flowerManager.getFlowerAt(col, row);
-      if (!existingFlower) {
+    // Check flower sell / plant
+    const existingFlower = this.flowerManager.getFlowerAt(col, row);
+    if (this.flowerMode) {
+      if (!existingFlower && this.map.getTerrain(col, row) === TERRAIN.GRASS) {
         const v = this.flowerManager.selectedVariety;
         if (this.gold >= v.cost) {
           this.flowerManager.plant(col, row, v.id);
           this.audio.playBuild();
         }
-        return;
       }
+      return;
+    }
+    if (existingFlower) {
+      this.ui.flowerPopup.show(col, row);
+      this.selectedTile = { col, row };
+      return;
     }
 
-    // Check if clicking on buildable tile
-    if (this.map.isBuildable(col, row)) {
+    // Check if clicking on buildable tile (not grass)
+    if (this.map.isBuildable(col, row) && this.map.getTerrain(col, row) !== TERRAIN.GRASS) {
       this.ui.towerInfo.hide();
       this.selectedTower = null;
       this.selectedTile = { col, row };
@@ -677,6 +702,7 @@ export class GameEngine extends EventEmitter {
     // Clicking elsewhere
     this.ui.buildMenu.hide();
     this.ui.towerInfo.hide();
+    this.ui.flowerPopup.hide();
     this.selectedTower = null;
     this.selectedTile = null;
   }
@@ -737,14 +763,16 @@ export class GameEngine extends EventEmitter {
     const existingTower = this.towerManager.getTowerAt(col, row);
     if (existingTower) {
       this.ui.buildMenu.hide();
+      this.ui.flowerPopup.hide();
       this.selectedTower = existingTower;
       this.selectedTile = { col, row };
       this.ui.towerInfo.show(existingTower);
       return true;
     }
 
-    if (this.map.isBuildable(col, row)) {
+    if (this.map.isBuildable(col, row) && this.map.getTerrain(col, row) !== TERRAIN.GRASS) {
       this.ui.towerInfo.hide();
+      this.ui.flowerPopup.hide();
       this.selectedTower = null;
       this.selectedTile = { col, row };
       this.ui.buildMenu.show(col, row);
@@ -878,6 +906,10 @@ export class GameEngine extends EventEmitter {
 
   showHeroPanel() {
     this.heroPanel.show();
+  }
+
+  showWorkbench() {
+    this.workbenchPanel.show();
   }
 
   switchHero(typeId) {
@@ -1017,6 +1049,7 @@ export class GameEngine extends EventEmitter {
 
   _gameOver() {
     this.gameOver = true;
+    this.audio.stopBGM();
     this.audio.playGameOver();
     const reason = this.gameMode === 'campaign' ? 'defeat' : 'defeat';
     this.ui.gameOver.show(reason);

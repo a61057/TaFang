@@ -258,6 +258,8 @@ html, body {
   border-radius: 8px;
   padding: 12px;
   min-width: 180px;
+  max-height: 60vh;
+  overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   backdrop-filter: blur(8px);
   display: none;
@@ -824,6 +826,168 @@ html, body {
 .weapon-card-stat { font-size: 11px; color: #ffd700; margin-top: 2px; }
 .weapon-card-action { flex-shrink: 0; }
 
+/* Workbench Panel */
+#workbenchPanel .workbench-content {
+  background: rgba(22,33,62,0.97);
+  border: 1px solid rgba(100,120,200,0.3);
+  border-radius: 12px;
+  width: 680px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.workbench-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.workbench-title { font-size: 16px; font-weight: 700; color: #dde; }
+.workbench-close {
+  background: none; border: none; color: #889;
+  font-size: 24px; cursor: pointer; padding: 0 8px;
+}
+.workbench-close:hover { color: #e74c3c; }
+.workbench-body {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 300px;
+}
+.workbench-left, .workbench-center, .workbench-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.workbench-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #889;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 4px;
+}
+.workbench-base-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.workbench-base-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.workbench-base-item:hover { background: rgba(255,255,255,0.1); }
+.workbench-base-item.active {
+  background: rgba(74,144,217,0.15);
+  border-color: #4a90d9;
+}
+.workbench-base-icon { font-size: 18px; }
+.workbench-base-name { font-size: 13px; color: #dde; flex: 1; }
+.workbench-base-cost { font-size: 11px; color: #ffd700; }
+.workbench-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.workbench-part-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+}
+.workbench-part-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.workbench-part-name { font-size: 13px; font-weight: 600; color: #dde; }
+.workbench-part-levels { font-size: 11px; color: #ffd700; letter-spacing: 2px; }
+.workbench-part-desc { font-size: 10px; color: #889; }
+.workbench-part-action { margin-top: 4px; }
+.workbench-part-btn {
+  padding: 3px 10px;
+  background: rgba(74,144,217,0.2);
+  border: 1px solid #4a90d9;
+  border-radius: 3px;
+  color: #aac;
+  font-size: 11px;
+  cursor: pointer;
+}
+.workbench-part-btn:hover { background: rgba(74,144,217,0.35); }
+.workbench-part-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+.workbench-part-maxed { font-size: 10px; color: #ff8844; font-weight: 700; }
+.workbench-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.workbench-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #aab;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.workbench-stat-row span:first-child { width: 60px; }
+.stat-val { color: #889; min-width: 30px; text-align: right; }
+.stat-arrow { color: #556; }
+.stat-new { color: #dde; font-weight: 600; }
+.stat-bonus { color: #44ff44; font-size: 10px; margin-left: 4px; }
+.workbench-total {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.workbench-total-cost { font-size: 13px; color: #ffd700; font-weight: 700; text-align: center; }
+.workbench-build-btn {
+  padding: 8px 16px;
+  background: rgba(74,144,217,0.25);
+  border: 1px solid #4a90d9;
+  border-radius: 4px;
+  color: #dde;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+.workbench-build-btn:hover { background: rgba(74,144,217,0.4); }
+.workbench-build-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.workbench-empty { font-size: 11px; color: #667; padding: 12px; text-align: center; }
+
+/* Build menu divider */
+.build-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin: 4px 0;
+}
+.assemble-btn { border-color: #ff8844 !important; }
+.assemble-btn:hover { background: rgba(255,136,68,0.15) !important; }
+
 /* Dialogue Box */
 #dialogueBox {
   position: fixed;
@@ -840,7 +1004,7 @@ html, body {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.5);
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .dialogue-content {

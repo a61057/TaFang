@@ -1,5 +1,6 @@
 import { TILE_SIZE, MAX_TOWER_LEVEL } from '../config/constants.js';
 import { TOWER_TYPES, getTowerStats } from '../config/towerData.js';
+import { PARTS, getPartStats } from '../config/partShop.js';
 
 export class Tower {
   constructor() {
@@ -54,6 +55,20 @@ export class Tower {
     return this.level < MAX_TOWER_LEVEL - 1;
   }
 
+  _applyParts() {
+    if (!this.parts || !this.stats) return;
+    for (const partId of Object.keys(this.parts)) {
+      const lvl = this.parts[partId];
+      if (!lvl) continue;
+      const ps = getPartStats(partId, lvl);
+      if (!ps) continue;
+      if (ps.damage) this.stats.damage += ps.damage;
+      if (ps.range) this.stats.range += ps.range;
+      if (ps.fireRateMult) this.stats.fireRate *= ps.fireRateMult;
+      if (ps.splash) this.stats.splash = (this.stats.splash || 0) + ps.splash;
+    }
+  }
+
   getUpgradeCost() {
     if (!this.canUpgrade()) return -1;
     const nextStats = getTowerStats(this.typeId, this.level + 1);
@@ -64,6 +79,7 @@ export class Tower {
     if (!this.canUpgrade()) return false;
     this.level++;
     this.stats = getTowerStats(this.typeId, this.level);
+    this._applyParts();
     this.maxHp = 300 + this.level * 300;
     this.hp = this.maxHp;
     this.cooldown = 0;
@@ -87,6 +103,15 @@ export class Tower {
     if (!type) return 0;
     for (let i = 0; i <= this.level; i++) {
       totalCost += type.levels[i].cost;
+    }
+    if (this.parts) {
+      for (const partId of Object.keys(this.parts)) {
+        const lvl = this.parts[partId];
+        for (let i = 1; i <= lvl; i++) {
+          const ps = getPartStats(partId, i);
+          if (ps) totalCost += ps.cost;
+        }
+      }
     }
     return Math.floor(totalCost * 0.7);
   }
@@ -570,7 +595,8 @@ export class Tower {
       level: this.level,
       totalKills: this.totalKills,
       totalDamage: this.totalDamage,
-      hp: this.hp
+      hp: this.hp,
+      parts: this.parts || null
     };
   }
 
@@ -593,6 +619,10 @@ export class Tower {
     tower.maxHp = 300 + tower.level * 300;
     tower.hp = data.hp !== undefined ? data.hp : tower.maxHp;
     if (tower.hp <= 0) tower.alive = false;
+    if (data.parts) {
+      tower.parts = data.parts;
+      tower._applyParts();
+    }
     return tower;
   }
 }

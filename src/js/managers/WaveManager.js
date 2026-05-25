@@ -1,5 +1,5 @@
 import { ENEMY_TYPES, getEnemyStats } from '../config/enemyData.js';
-import { PREP_TIME, WAVE_BASE_REWARD, BOSS_INTERVAL } from '../config/constants.js';
+import { PREP_TIME, WAVE_BASE_REWARD, PER_WAVE_REWARD, BOSS_INTERVAL } from '../config/constants.js';
 
 export class WaveManager {
   constructor(enemyManager, gameEngine) {
@@ -155,7 +155,7 @@ export class WaveManager {
 
     this.prepTimer = this.currentWave >= 30 ? Math.max(5, PREP_TIME - (this.currentWave - 30) * 0.5) : PREP_TIME;
 
-    const reward = WAVE_BASE_REWARD + this.currentWave * 10 + (this.perfectWave ? 50 : 0);
+    const reward = WAVE_BASE_REWARD + this.currentWave * PER_WAVE_REWARD + (this.perfectWave ? 50 : 0);
     if (this.gameEngine) {
       this.gameEngine.addGold(reward);
       this.gameEngine.onWaveComplete(this.currentWave, reward, this.perfectWave);

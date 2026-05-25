@@ -63,16 +63,30 @@ export class GameOverScreen {
       titleEl.style.color = '#e74c3c';
       titleEl.style.textShadow = '0 0 30px rgba(231,76,60,0.4)';
       actionsEl.innerHTML = `
-        <button class="hud-btn primary" id="btnRestart">${t('gameOver.newGame')}</button>
-        <button class="hud-btn" id="btnLoadSave">${t('gameOver.loadSave')}</button>
+        <div style="margin-bottom:12px;font-size:13px;color:#aab;">输入 "爸爸" 复活</div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <input type="text" id="dadInput" style="padding:8px 12px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.4);color:#fff;font-size:16px;width:160px;text-align:center;outline:none;" placeholder="输入" maxlength="2">
+          <button class="hud-btn primary" id="btnDadSubmit">确认</button>
+        </div>
+        <div id="dadError" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none;">不对，再想想</div>
       `;
-      actionsEl.querySelector('#btnRestart').addEventListener('click', () => {
-        this.engine.resetGame();
+      const input = actionsEl.querySelector('#dadInput');
+      const submit = actionsEl.querySelector('#btnDadSubmit');
+      const error = actionsEl.querySelector('#dadError');
+      const check = () => {
+        if (input.value === '爸爸') {
+          this.hide();
+          this.engine.lives = 20;
+          this.engine.gameOver = false;
+        } else {
+          error.style.display = 'block';
+        }
+      };
+      submit.addEventListener('click', check);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') check();
       });
-      actionsEl.querySelector('#btnLoadSave').addEventListener('click', () => {
-        this.hide();
-        this.engine.showLoadDialog();
-      });
+      setTimeout(() => input.focus(), 100);
     }
 
     this.element.querySelector('#gameOverStats').innerHTML = `

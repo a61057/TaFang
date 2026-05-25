@@ -54,6 +54,7 @@ function init() {
       window.location.reload();
     }
   );
+  engine.mainMenu = mainMenu;
   mainMenu.show();
 
   // Achievement listener
@@ -68,6 +69,7 @@ function init() {
 
   engine.on('load-complete', (slot) => {
     mainMenu.hide();
+    document.getElementById('gameContainer').style.display = '';
     showNotification(t('notify.loadComplete', slot));
   });
 

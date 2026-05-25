@@ -32,7 +32,7 @@ defineEnemy('boss', {
 });
 defineEnemy('megaboss', {
   id: 'megaboss', name: 'MEGA BOSS', color: '#ff4400',
-  baseHp: 5000, baseSpeed: 20, armor: 12, bounty: 500,
+  baseHp: 4000, baseSpeed: 22, armor: 10, bounty: 600,
   size: 36, isFlying: false, isBoss: true
 });
 defineEnemy('bomber', {
@@ -44,17 +44,17 @@ defineEnemy('bomber', {
 export function getEnemyStats(typeId, waveNumber) {
   const type = ENEMY_TYPES[typeId];
   if (!type) return null;
-  let difficulty = 1 + (waveNumber - 1) * 0.1;
-  // 30波后逐渐提升难度
+  let difficulty = 1 + (waveNumber - 1) * 0.09;
+  // 30波后额外加速
   if (waveNumber >= 30) {
     const extraWaves = waveNumber - 29;
-    difficulty *= (1 + extraWaves * 0.04);
+    difficulty *= (1 + extraWaves * 0.03);
   }
   return {
     ...type,
     maxHp: Math.floor(type.baseHp * difficulty),
-    speed: type.baseSpeed * (1 + (waveNumber - 1) * 0.02) * (waveNumber >= 30 ? (1 + (waveNumber - 29) * 0.02) : 1),
-    armor: type.armor + Math.floor((waveNumber - 1) / 10) + (waveNumber >= 30 ? Math.floor((waveNumber - 29) / 8) : 0),
-    bounty: Math.floor(type.bounty * (1 + (waveNumber - 1) * 0.05))
+    speed: type.baseSpeed * (1 + (waveNumber - 1) * 0.018) * (waveNumber >= 30 ? (1 + (waveNumber - 29) * 0.015) : 1),
+    armor: type.armor + Math.floor((waveNumber - 1) / 10) + (waveNumber >= 30 ? Math.floor((waveNumber - 29) / 10) : 0),
+    bounty: Math.floor(type.bounty * (1 + (waveNumber - 1) * 0.06))
   };
 }

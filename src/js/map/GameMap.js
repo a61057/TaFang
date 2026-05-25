@@ -16,6 +16,7 @@ export class GameMap {
     this.path = [];
     this.startTile = null;
     this.endTile = null;
+    this._decorations = null;
     this._initDefault();
   }
 
@@ -36,6 +37,44 @@ export class GameMap {
     this._fillPathTiles();
 
     this._setBuildable();
+
+    this._generateDecorations();
+  }
+
+  _hash(col, row, seed) {
+    let h = col * 374761393 + row * 668265263 + seed;
+    h = (h ^ (h >> 13)) * 1274126177;
+    return (h ^ (h >> 16)) & 0x7fffffff;
+  }
+
+  _generateDecorations() {
+    this._decorations = [];
+    for (let r = 0; r < this.rows; r++) {
+      this._decorations[r] = [];
+      for (let c = 0; c < this.cols; c++) {
+        const deco = { dots: [], blades: [], shade: 0 };
+        const t = this.grid[r][c].terrain;
+        if (t === TERRAIN.GRASS || t === TERRAIN.BUILDABLE || t === TERRAIN.NORMAL) {
+          deco.shade = (this._hash(c, r, 1) % 20 - 10) / 100;
+          const dotCount = this._hash(c, r, 2) % 5 + 2;
+          for (let i = 0; i < dotCount; i++) {
+            deco.dots.push({
+              dx: this._hash(c * 10 + r, i * 3 + 1, 3) % 30 + 2,
+              dy: this._hash(c * 10 + r, i * 3 + 2, 7) % 30 + 2,
+              size: (this._hash(c * 10 + r, i * 3 + 3, 11) % 3) + 1
+            });
+          }
+          const bladeCount = this._hash(c, r, 13) % 3 + 1;
+          for (let i = 0; i < bladeCount; i++) {
+            deco.blades.push({
+              bx: this._hash(c * 7 + r, i * 5 + 1, 17) % 32 + 4,
+              bh: (this._hash(c * 7 + r, i * 5 + 2, 19) % 6) + 4
+            });
+          }
+        }
+        this._decorations[r][c] = deco;
+      }
+    }
   }
 
   _fillPathTiles() {
@@ -148,8 +187,44 @@ export class GameMap {
         const t = this.grid[r][c].terrain;
         const x = c * this.tileSize + offsetX;
         const y = r * this.tileSize + offsetY;
-        ctx.fillStyle = TERRAIN_COLORS[t] || '#2d5a27';
-        ctx.fillRect(x, y, this.tileSize, this.tileSize);
+
+        if (t === TERRAIN.GRASS || t === TERRAIN.BUILDABLE || t === TERRAIN.NORMAL) {
+          const deco = this._decorations[r][c];
+          const base = TERRAIN_COLORS[t] || '#3a7d32';
+
+          ctx.fillStyle = base;
+          ctx.fillRect(x, y, this.tileSize, this.tileSize);
+
+          ctx.fillStyle = deco.shade > 0
+            ? `rgba(255,255,200,${deco.shade * 0.3})`
+            : `rgba(0,0,0,${Math.abs(deco.shade) * 0.2})`;
+          ctx.fillRect(x, y, this.tileSize, this.tileSize);
+
+          for (const d of deco.dots) {
+            ctx.fillStyle = d.size > 2
+              ? `rgba(80,60,30,0.12)`
+              : `rgba(100,180,80,0.15)`;
+            ctx.beginPath();
+            ctx.arc(x + d.dx, y + d.dy, d.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          for (const b of deco.blades) {
+            ctx.strokeStyle = `rgba(30,80,20,${0.2 + (b.bh / 10) * 0.15})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + b.bx, y + 36);
+            ctx.quadraticCurveTo(x + b.bx - 2, y + 36 - b.bh * 0.6, x + b.bx - 3, y + 36 - b.bh);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + b.bx + 2, y + 36);
+            ctx.quadraticCurveTo(x + b.bx + 4, y + 36 - b.bh * 0.5, x + b.bx + 3, y + 36 - b.bh + 2);
+            ctx.stroke();
+          }
+        } else {
+          ctx.fillStyle = TERRAIN_COLORS[t] || '#2d5a27';
+          ctx.fillRect(x, y, this.tileSize, this.tileSize);
+        }
 
         if (t === TERRAIN.START) {
           ctx.fillStyle = 'rgba(74, 144, 217, 0.3)';
@@ -222,6 +297,7 @@ export class GameMap {
         map.grid[r][c] = { terrain, col: c, row: r };
       }
     }
+    map._generateDecorations();
     return map;
   }
 }

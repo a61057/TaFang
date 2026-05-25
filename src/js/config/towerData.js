@@ -8,7 +8,7 @@ export const TOWER_TYPES = {
     levels: [
       { cost: 100, damage: 50, fireRate: 2.0, range: 150, splash: 0 },
       { cost: 80, damage: 90, fireRate: 1.8, range: 160, splash: 0 },
-      { cost: 120, damage: 150, fireRate: 1.6, range: 180, splash: 30 }
+      { cost: 120, damage: 150, fireRate: 1.6, range: 180, splash: 40 }
     ],
     bulletColor: '#333333',
     bulletSpeed: 500,
@@ -36,9 +36,9 @@ export const TOWER_TYPES = {
     color: '#cc6633',
     faction: 'human',
     levels: [
-      { cost: 120, damage: 30, fireRate: 1.5, range: 200, splash: 60 },
-      { cost: 100, damage: 55, fireRate: 1.3, range: 210, splash: 70 },
-      { cost: 150, damage: 90, fireRate: 1.2, range: 220, splash: 85 }
+      { cost: 120, damage: 35, fireRate: 1.5, range: 200, splash: 60 },
+      { cost: 100, damage: 60, fireRate: 1.3, range: 210, splash: 75 },
+      { cost: 150, damage: 110, fireRate: 1.2, range: 220, splash: 90 }
     ],
     bulletColor: '#ff8844',
     bulletSpeed: 300,
@@ -80,14 +80,14 @@ export const TOWER_TYPES = {
   SNIPER: {
     id: 'sniper',
     name: 'Sniper Tower',
-    description: 'Extreme range, massive single-target damage',
-    color: '#334455',
+    description: 'Extreme range, single target',
+    color: '#6688aa',
     faction: 'human',
-    unlockCost: 500,
+    unlockCost: 300,
     levels: [
-      { cost: 150, damage: 120, fireRate: 3.0, range: 250, splash: 0 },
-      { cost: 120, damage: 200, fireRate: 2.5, range: 270, splash: 0 },
-      { cost: 180, damage: 320, fireRate: 2.0, range: 300, splash: 0 }
+      { cost: 150, damage: 130, fireRate: 2.8, range: 260, splash: 0 },
+      { cost: 120, damage: 220, fireRate: 2.3, range: 280, splash: 0 },
+      { cost: 180, damage: 400, fireRate: 1.8, range: 320, splash: 0 }
     ],
     bulletColor: '#88aacc',
     bulletSpeed: 1000,
@@ -96,14 +96,14 @@ export const TOWER_TYPES = {
   FLAMETHROWER: {
     id: 'flamethrower',
     name: 'Flamethrower',
-    description: 'Short range, burns enemies in an area',
-    color: '#cc3300',
+    description: 'Area burn damage',
+    color: '#ff6633',
     faction: 'undead',
-    unlockCost: 400,
+    unlockCost: 250,
     levels: [
-      { cost: 100, damage: 12, fireRate: 0.4, range: 100, splash: 40, burnDamage: 8, burnDuration: 3000 },
-      { cost: 90, damage: 20, fireRate: 0.35, range: 110, splash: 50, burnDamage: 12, burnDuration: 3500 },
-      { cost: 130, damage: 32, fireRate: 0.3, range: 120, splash: 60, burnDamage: 18, burnDuration: 4000 }
+      { cost: 100, damage: 15, fireRate: 0.4, range: 110, splash: 45, burnDamage: 15, burnDuration: 3000 },
+      { cost: 90, damage: 25, fireRate: 0.35, range: 120, splash: 55, burnDamage: 25, burnDuration: 3500 },
+      { cost: 130, damage: 40, fireRate: 0.3, range: 130, splash: 65, burnDamage: 45, burnDuration: 4000 }
     ],
     bulletColor: '#ff6633',
     bulletSpeed: 400,
@@ -113,14 +113,14 @@ export const TOWER_TYPES = {
   ARC: {
     id: 'arc',
     name: 'Arc Tower',
-    description: 'Chains to many enemies with arcing lightning',
-    color: '#00ccaa',
+    description: 'Chain lightning, hits multiple enemies',
+    color: '#44ffcc',
     faction: 'machine',
-    unlockCost: 450,
+    unlockCost: 300,
     levels: [
-      { cost: 120, damage: 15, fireRate: 1.5, range: 150, splash: 0, chainCount: 4, chainRange: 70 },
-      { cost: 100, damage: 25, fireRate: 1.3, range: 160, splash: 0, chainCount: 5, chainRange: 80 },
-      { cost: 150, damage: 40, fireRate: 1.1, range: 170, splash: 0, chainCount: 6, chainRange: 90 }
+      { cost: 120, damage: 20, fireRate: 1.5, range: 150, splash: 0, chainCount: 5, chainRange: 80 },
+      { cost: 100, damage: 35, fireRate: 1.3, range: 160, splash: 0, chainCount: 6, chainRange: 90 },
+      { cost: 150, damage: 55, fireRate: 1.1, range: 170, splash: 0, chainCount: 8, chainRange: 110 }
     ],
     bulletColor: '#44ffcc',
     bulletSpeed: 9999,
@@ -128,15 +128,15 @@ export const TOWER_TYPES = {
   },
   INSECTICIDE: {
     id: 'insecticide',
-    name: 'Pesticide',
-    description: 'Sprays poisonous insecticide, area damage over time',
-    color: '#44cc44',
+    name: 'Pesticide Sprayer',
+    description: 'Sprays toxic insecticide, area poison damage',
+    color: '#44aa44',
     faction: 'undead',
-    unlockCost: 1000,
+    unlockCost: 500,
     levels: [
-      { cost: 500, damage: 40, fireRate: 0.8, range: 140, splash: 50, poisonDamage: 15, poisonDuration: 4000 },
-      { cost: 400, damage: 70, fireRate: 0.7, range: 150, splash: 60, poisonDamage: 25, poisonDuration: 4500 },
-      { cost: 600, damage: 110, fireRate: 0.6, range: 160, splash: 70, poisonDamage: 40, poisonDuration: 5000 }
+      { cost: 200, damage: 35, fireRate: 0.8, range: 140, splash: 50, poisonDamage: 30, poisonDuration: 4000 },
+      { cost: 300, damage: 60, fireRate: 0.7, range: 150, splash: 60, poisonDamage: 50, poisonDuration: 4500 },
+      { cost: 400, damage: 100, fireRate: 0.6, range: 160, splash: 70, poisonDamage: 80, poisonDuration: 5000 }
     ],
     bulletColor: '#66ff66',
     bulletSpeed: 400,

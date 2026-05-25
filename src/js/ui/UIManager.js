@@ -1,6 +1,7 @@
 import { HUD } from './HUD.js';
 import { BuildMenu } from './BuildMenu.js';
 import { TowerInfoPanel } from './TowerInfoPanel.js';
+import { FlowerPopup } from './FlowerPopup.js';
 import { GameOverScreen } from './GameOverScreen.js';
 import { t } from '../config/locale.js';
 
@@ -10,6 +11,7 @@ export class UIManager {
     this.hud = new HUD(gameEngine);
     this.buildMenu = new BuildMenu(gameEngine);
     this.towerInfo = new TowerInfoPanel(gameEngine);
+    this.flowerPopup = new FlowerPopup(gameEngine);
     this.gameOver = new GameOverScreen(gameEngine);
     this.hoveredTile = null;
     this.hoveredTower = null;

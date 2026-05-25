@@ -82,6 +82,7 @@ export class HUD {
     this.eventDisplay = this.element.querySelector('#eventDisplay');
     this.reviveBtn = this.element.querySelector('#btnReviveHero');
     this.flowerBtn = this.element.querySelector('#btnFlowerMode');
+    this.pauseBtn = this.element.querySelector('#btnPause');
 
     this.flowerBtn.addEventListener('click', () => {
       if (this.engine.flowerMode) {
@@ -156,7 +157,9 @@ export class HUD {
     this.enemyCount.textContent = state.enemyCount;
     this.goldDisplay.textContent = state.gold;
     this.livesDisplay.textContent = state.lives;
-    this.flowerCount.textContent = state.flowerCount || 0;
+    const totalFlowers = state.flowerCount || 0;
+    const matureFlowers = this.engine.flowerManager.getMatureCount();
+    this.flowerCount.textContent = matureFlowers > 0 ? `💰${matureFlowers}/${totalFlowers}` : `${totalFlowers}`;
     this._updateFlowerBtn();
     this.fpsDisplay.textContent = t('hud.fps', state.fps);
 
@@ -167,6 +170,8 @@ export class HUD {
       this.heroDisplay.textContent = `${typeName} ${t('hero.level', h.level)} ${deployedStr} ${h.alive ? t('hero.alive') : t('hero.dead')}`;
       this.reviveBtn.style.display = (!h.alive && this.engine.gold >= HERO_REVIVE_COST) ? 'inline-block' : 'none';
     }
+
+    this.pauseBtn.textContent = state.isPaused ? t('hud.paused') : t('hud.pause');
 
     if (this.engine.weatherSystem) {
       const w = this.engine.weatherSystem;
