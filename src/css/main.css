@@ -1,4 +1,12 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+@font-face {
+  font-family: 'Zpix';
+  src: url('../fonts/Zpix.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; image-rendering: pixelated; -webkit-font-smoothing: none; -moz-osx-font-smoothing: unset; }
 
 html, body {
   width: 100%;
@@ -6,7 +14,7 @@ html, body {
   overflow: hidden;
   background: #1a1a2e;
   color: #e0e0e0;
-  font-family: 'Segoe UI', 'Arial', sans-serif;
+  font-family: 'Zpix', 'Courier New', 'MS Gothic', monospace;
   user-select: none;
 }
 

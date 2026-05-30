@@ -104,7 +104,13 @@ function init() {
 function handleResize() {
   const canvas = document.getElementById('gameCanvas');
   const container = document.getElementById('gameContainer');
-  const titlebar = document.getElementById('titlebar');
+  const hud = document.getElementById('hud');
+
+  let hudHeight = 0;
+  if (hud) {
+    hudHeight = hud.offsetHeight;
+    container.style.top = (32 + hudHeight) + 'px';
+  }
 
   const availW = container.clientWidth;
   const availH = container.clientHeight;

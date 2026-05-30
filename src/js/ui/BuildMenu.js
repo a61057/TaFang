@@ -35,22 +35,15 @@ export class BuildMenu {
     this.row = row;
     this.visible = true;
 
-    const pos = this.engine.map.getWorldPos(col, row);
     const canvas = document.getElementById('gameCanvas');
     const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width / canvas.width;
-    const scaleY = rect.height / canvas.height;
-
-    let left = pos.x * scaleX + rect.left - 80;
-    let top = pos.y * scaleY + rect.top - 100;
-
-    if (left < 10) left = 10;
-    if (top < 10) top = 10;
-    if (left + 160 > window.innerWidth - 10) left = window.innerWidth - 170;
-    if (top > window.innerHeight - 100) top = window.innerHeight - 110;
+    const menuWidth = this.element.offsetWidth || 200;
+    const left = Math.max(5, rect.left - menuWidth - 5);
+    const top = 50;
 
     this.element.style.left = left + 'px';
     this.element.style.top = top + 'px';
+    this.element.style.maxHeight = (window.innerHeight - top - 10) + 'px';
     this.element.style.display = 'block';
 
     this.optionsContainer.innerHTML = '';

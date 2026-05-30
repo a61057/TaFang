@@ -690,21 +690,11 @@ export class GameEngine extends EventEmitter {
       return;
     }
 
-    // Check if clicking on buildable tile (not grass)
-    if (this.map.isBuildable(col, row) && this.map.getTerrain(col, row) !== TERRAIN.GRASS) {
-      this.ui.towerInfo.hide();
-      this.selectedTower = null;
-      this.selectedTile = { col, row };
-      this.ui.buildMenu.show(col, row);
-      return;
-    }
-
-    // Clicking elsewhere
-    this.ui.buildMenu.hide();
+    // Any empty tile shows build menu on the left
     this.ui.towerInfo.hide();
-    this.ui.flowerPopup.hide();
     this.selectedTower = null;
-    this.selectedTile = null;
+    this.selectedTile = { col, row };
+    this.ui.buildMenu.show(col, row);
   }
 
   _handleRightClick(e) {
