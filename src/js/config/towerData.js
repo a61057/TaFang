@@ -110,6 +110,19 @@ export const TOWER_TYPES = {
     bulletSize: 6,
     effect: 'burn'
   },
+  OBSERVATION: {
+    id: 'observation',
+    name: 'Observation Tower',
+    description: 'Increases range of nearby towers',
+    color: '#88aacc',
+    faction: 'elf',
+    levels: [
+      { cost: 250, damage: 0, fireRate: 999, range: 0, buffRange: 160, rangeBonus: 35 },
+      { cost: 200, damage: 0, fireRate: 999, range: 0, buffRange: 190, rangeBonus: 55 },
+      { cost: 300, damage: 0, fireRate: 999, range: 0, buffRange: 230, rangeBonus: 80 }
+    ],
+    isBuffTower: true
+  },
   ARC: {
     id: 'arc',
     name: 'Arc Tower',

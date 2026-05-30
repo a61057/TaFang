@@ -65,7 +65,7 @@ export class GameOverScreen {
       actionsEl.innerHTML = `
         <div style="margin-bottom:12px;font-size:13px;color:#aab;">输入 "爸爸" 复活</div>
         <div style="display:flex;gap:8px;justify-content:center;">
-          <input type="text" id="dadInput" style="padding:8px 12px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.4);color:#fff;font-size:16px;width:160px;text-align:center;outline:none;" placeholder="输入" maxlength="2">
+          <input type="text" id="dadInput" style="padding:8px 12px;border-radius:1px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.4);color:#fff;font-size:16px;width:160px;text-align:center;outline:none;" placeholder="输入" maxlength="2">
           <button class="hud-btn primary" id="btnDadSubmit">确认</button>
         </div>
         <div id="dadError" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none;">不对，再想想</div>

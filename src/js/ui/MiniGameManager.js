@@ -209,7 +209,7 @@ export class MiniGameManager {
           <span class="mg-timer">${t('miniGame.time')}: <strong id="mgTimer">${timeLeft}</strong>s</span>
         </div>
         <div class="mg-catch-area" id="catchArea" style="width:${width}px;height:${height}px;position:relative;overflow:hidden;margin:0 auto;">
-          <div id="catcher" style="position:absolute;bottom:8px;left:${catcherX}px;width:${catcherW}px;height:${catcherH}px;background:linear-gradient(90deg,#4a90d9,#66aaff);border-radius:4px;transition:left 0.05s;"></div>
+          <div id="catcher" style="position:absolute;bottom:8px;left:${catcherX}px;width:${catcherW}px;height:${catcherH}px;background:linear-gradient(90deg,#4a90d9,#66aaff);border-radius:1px;transition:left 0.05s;"></div>
         </div>
       </div>
     `;

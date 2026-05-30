@@ -1,7 +1,7 @@
 import { TOWER_TYPES, getTowerStats } from '../config/towerData.js';
 import { t } from '../config/locale.js';
 
-const TOWER_TYPE_MAP = { cannon: 'cannon', machine: 'machine', mortar: 'mortar', slow: 'slow', electric: 'electric' };
+const TOWER_TYPE_MAP = { cannon: 'cannon', machine: 'machine', mortar: 'mortar', slow: 'slow', electric: 'electric', observation: 'observation' };
 
 export class TowerInfoPanel {
   constructor(gameEngine) {
@@ -69,7 +69,7 @@ export class TowerInfoPanel {
     const tower = this.currentTower;
     const type = TOWER_TYPES[tower.typeId];
     const stats = tower.stats;
-    const localeKey = TOWER_TYPE_MAP[tower.typeId] || tower.typeId;
+    const localeKey = (TOWER_TYPE_MAP[tower.typeId] || tower.typeId).toLowerCase();
 
     this.element.querySelector('#towerName').textContent = `${t(`tower.${localeKey}.name`)} ${t('towerInfo.level', tower.level + 1)}`;
 
@@ -82,6 +82,8 @@ export class TowerInfoPanel {
       ${stats.splash ? `<div class="stat-row"><span>${t('towerInfo.splash')}</span><span>${stats.splash}px</span></div>` : ''}
       ${stats.slowAmount ? `<div class="stat-row"><span>${t('towerInfo.slow')}</span><span>${Math.round(stats.slowAmount * 100)}%</span></div>` : ''}
       ${stats.chainCount ? `<div class="stat-row"><span>${t('towerInfo.chain')}</span><span>${t('towerInfo.targets', stats.chainCount)}</span></div>` : ''}
+      ${stats.buffRange ? `<div class="stat-row"><span>${t('towerInfo.buffRange')}</span><span>${stats.buffRange}px</span></div>` : ''}
+      ${stats.rangeBonus ? `<div class="stat-row"><span>${t('towerInfo.rangeBonus')}</span><span>+${stats.rangeBonus}px</span></div>` : ''}
     `;
     this.element.querySelector('#towerStats').innerHTML = statsHtml;
 

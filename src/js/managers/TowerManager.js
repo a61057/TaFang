@@ -44,8 +44,30 @@ export class TowerManager {
     return this.towers.find(t => t.col === col && t.row === row) || null;
   }
 
-  update(dt, enemies, rangeMult = 1, fireRateMult = 1) {
+  update(dt, enemies, rangeMult = 1, fireRateMult = 1, damageMult = 1) {
     const bullets = this.bulletPool.getActive();
+
+    // 计算瞭望塔的射程加成
+    for (const tower of this.towers) {
+      tower._rangeBuff = 0;
+      if (!tower.alive) continue;
+    }
+    for (const obs of this.towers) {
+      if (!obs.alive) continue;
+      if (obs.typeId !== 'OBSERVATION') continue;
+      const buffRange = obs.stats ? obs.stats.buffRange || 0 : 0;
+      const rangeBonus = obs.stats ? obs.stats.rangeBonus || 0 : 0;
+      if (buffRange <= 0) continue;
+      for (const tower of this.towers) {
+        if (tower === obs) continue;
+        if (!tower.alive) continue;
+        const dx = tower.x - obs.x;
+        const dy = tower.y - obs.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= buffRange) {
+          tower._rangeBuff = (tower._rangeBuff || 0) + rangeBonus;
+        }
+      }
+    }
 
     for (const tower of this.towers) {
       if (!tower.alive) continue;
@@ -55,13 +77,18 @@ export class TowerManager {
       tower._enemies = enemies;
       tower.update(dt);
 
+      if (tower.typeId === 'OBSERVATION') continue;
+
       if (tower.canFire()) {
-        const adjRange = (tower.stats ? tower.stats.range : 150) * rangeMult;
+        const adjRange = ((tower.stats ? tower.stats.range : 150) + (tower._rangeBuff || 0)) * rangeMult;
         const target = tower.findTarget(enemies, adjRange);
         if (target) {
           tower.target = target;
           const fireData = tower.fire();
           if (fireData) {
+            if (damageMult !== 1) {
+              fireData.damage = Math.max(1, Math.round(fireData.damage * damageMult));
+            }
             const bullet = this.bulletPool.get();
             bullet.init(fireData.tower, target, tower.x, tower.y, fireData);
           }

@@ -118,7 +118,7 @@ export class Tower {
 
   findTarget(enemies, customRange) {
     if (!this.stats) return null;
-    const range = customRange || this.stats.range * (this._rangeMult || 1);
+    const range = customRange || (this.stats.range + (this._rangeBuff || 0)) * (this._rangeMult || 1);
     let best = null;
     let bestProgress = -1;
     let bestHp = Infinity;
@@ -513,6 +513,78 @@ export class Tower {
         ctx.arc(x + 6, y + 15, 1.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
+        break;
+      }
+      case 'OBSERVATION': {
+        const poleH = 32 * lvlScale;
+        // Base plate
+        ctx.fillStyle = '#4a5a6a';
+        ctx.fillRect(x - 18, y + 6, 36, 6);
+        ctx.fillStyle = '#5a6a7a';
+        ctx.fillRect(x - 16, y + 4, 32, 5);
+        // Tall pole
+        ctx.fillStyle = '#5a6a7a';
+        ctx.fillRect(x - 3, y - poleH, 6, poleH + 4);
+        ctx.fillStyle = '#6a7a8a';
+        ctx.fillRect(x - 1, y - poleH, 4, poleH + 4);
+        // Cross braces
+        ctx.strokeStyle = '#4a5a6a';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+          const by = y - poleH * 0.2 + i * poleH * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(x - 12, by);
+          ctx.lineTo(x + 12, by);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x - 10, by - 2);
+          ctx.lineTo(x + 10, by - 2);
+          ctx.stroke();
+        }
+        // Observation platform
+        ctx.fillStyle = '#6a7a8a';
+        ctx.fillRect(x - 16, y - poleH - 4, 32, 8);
+        ctx.fillStyle = '#7a8a9a';
+        ctx.fillRect(x - 14, y - poleH - 2, 28, 6);
+        // Railing
+        ctx.strokeStyle = '#5a6a7a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - 16, y - poleH - 4, 32, 8);
+        // Small posts on railing
+        for (let p = -1; p <= 1; p += 2) {
+          ctx.fillStyle = '#5a6a7a';
+          ctx.fillRect(x + p * 14 - 1, y - poleH - 7, 2, 5);
+        }
+        // Observation equipment (telescope/antenna)
+        ctx.fillStyle = '#88aacc';
+        ctx.fillRect(x - 2, y - poleH - 12, 4, 8);
+        ctx.fillStyle = '#aaccee';
+        ctx.beginPath();
+        ctx.arc(x, y - poleH - 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+        // Small flag/antenna
+        ctx.strokeStyle = '#889';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y - poleH - 18);
+        ctx.lineTo(x, y - poleH - 28);
+        ctx.stroke();
+        ctx.fillStyle = '#ff6644';
+        ctx.beginPath();
+        ctx.moveTo(x, y - poleH - 28);
+        ctx.lineTo(x + 8, y - poleH - 24);
+        ctx.lineTo(x, y - poleH - 20);
+        ctx.closePath();
+        ctx.fill();
+        // Glow effect on top (pulsing)
+        const pulse = Math.sin(Date.now() / 400) * 0.3 + 0.7;
+        ctx.shadowColor = '#88aacc';
+        ctx.shadowBlur = 10 * pulse;
+        ctx.fillStyle = `rgba(136,170,204,${0.2 * pulse})`;
+        ctx.beginPath();
+        ctx.arc(x, y - poleH - 14, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
         break;
       }
       case 'ARC': {
