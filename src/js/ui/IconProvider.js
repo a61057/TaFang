@@ -755,6 +755,41 @@ const ICONS = [
     hline(c, x+8, y+3, 2, '#48b');
     rect(c, x+5, y+4, 4, 1, '#48b');
   }},
+  { name: 'hexagon', draw(c, x, y) {
+    hline(c, x+4, y+0, 6, '#aac');
+    hline(c, x+3, y+1, 8, '#aac');
+    hline(c, x+2, y+2, 10, '#aac');
+    hline(c, x+1, y+3, 12, '#aac');
+    hline(c, x+1, y+4, 12, '#aac');
+    hline(c, x+1, y+5, 12, '#aac');
+    hline(c, x+1, y+6, 12, '#aac');
+    hline(c, x+1, y+7, 12, '#aac');
+    hline(c, x+1, y+8, 12, '#aac');
+    hline(c, x+1, y+9, 12, '#aac');
+    hline(c, x+1, y+10, 12, '#aac');
+    hline(c, x+2, y+11, 10, '#aac');
+    hline(c, x+3, y+12, 8, '#aac');
+    hline(c, x+4, y+13, 6, '#aac');
+    rect(c, x+3, y+1, 2, 12, '#dde');
+    rect(c, x+2, y+2, 2, 10, '#dde');
+    rect(c, x+1, y+3, 2, 8, '#dde');
+  }},
+  { name: 'wave', draw(c, x, y) {
+    hline(c, x+2, y+3, 3, '#6cf');
+    hline(c, x+7, y+1, 3, '#6cf');
+    hline(c, x+12, y+3, 2, '#6cf');
+    hline(c, x+3, y+6, 4, '#6cf');
+    hline(c, x+8, y+8, 3, '#6cf');
+    hline(c, x+1, y+9, 2, '#6cf');
+    hline(c, x+11, y+9, 1, '#6cf');
+    hline(c, x+5, y+11, 3, '#6cf');
+    hline(c, x+10, y+12, 4, '#6cf');
+    hline(c, x+2, y+4, 1, '#aff');
+    hline(c, x+8, y+2, 1, '#aff');
+    hline(c, x+4, y+7, 1, '#aff');
+    hline(c, x+10, y+9, 1, '#aff');
+    hline(c, x+6, y+12, 1, '#aff');
+  }},
 ];
 
 const EMOJI_MAP = {
@@ -774,8 +809,9 @@ const EMOJI_MAP = {
   '🐌': 'snail', '💨': 'wind',   '📉': 'chart_down', '💔': 'broken_heart',
   '👊': 'fist', '👀': 'eye', '🏗️': 'construct', '🎉': 'star',
   '🪙': 'coin', '✨': 'sparkle', '🗑️': 'trash', '🏴': 'flag',
-  '🌊': 'sun', '👹': 'skull2',
+  '🌊': 'wave', '👹': 'skull2',
   '⚔️': 'sword', '🛡️': 'shield',
+  '☠️': 'skull2', '⬡': 'hexagon',
 };
 
 export function initIconProvider() {

@@ -81,7 +81,7 @@ export class WorkbenchPanel {
       const div = document.createElement('div');
       div.className = `workbench-base-item${this.selectedBase === key ? ' active' : ''}`;
       div.innerHTML = `
-        <span class="workbench-base-icon" style="color:${type.color}">⬡</span>
+        <span class="workbench-base-icon">${iconHTML('hexagon')}</span>
         <span class="workbench-base-name">${t('tower.' + type.id + '.name')}</span>
         <span class="workbench-base-cost">${type.levels[0].cost}g</span>
       `;
