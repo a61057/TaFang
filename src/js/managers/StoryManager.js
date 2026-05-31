@@ -7,6 +7,7 @@ export class StoryManager {
     this.dialogueBox = new DialogueBox();
     this._triggeredWaves = new Set();
     this._pendingWave = null;
+    this._paused = false;
   }
 
   onWaveStart(wave) {
@@ -18,10 +19,16 @@ export class StoryManager {
     this._triggeredWaves.add(wave);
     this._pendingWave = wave;
 
-    this.gameEngine.paused = true;
+    if (wave > 0) {
+      this.gameEngine.paused = true;
+      this._paused = true;
+    }
 
     this.dialogueBox.show(scene.dialogues, () => {
-      this.gameEngine.paused = false;
+      if (this._paused) {
+        this.gameEngine.paused = false;
+        this._paused = false;
+      }
       this._pendingWave = null;
     });
   }

@@ -1,6 +1,7 @@
 import { t } from '../config/locale.js';
 import { TOWER_TYPES, TOWER_KEYS, getTowerStats } from '../config/towerData.js';
 import { PARTS, PART_KEYS, getPartCost, getPartStats } from '../config/partShop.js';
+import { iconHTML, replaceEmoji } from './IconProvider.js';
 
 export class WorkbenchPanel {
   constructor(engine) {
@@ -19,7 +20,7 @@ export class WorkbenchPanel {
     this.element.innerHTML = `
       <div class="workbench-content">
         <div class="workbench-header">
-          <span class="workbench-title">🔧 ${t('workbench.title')}</span>
+          <span class="workbench-title">${iconHTML('tools')} ${t('workbench.title')}</span>
           <button class="workbench-close">&times;</button>
         </div>
         <div class="workbench-body">
@@ -118,7 +119,7 @@ export class WorkbenchPanel {
       div.innerHTML = `
         <div class="workbench-part-info">
           <span class="workbench-part-name">${t('part.' + partId + '.name')}</span>
-          <span class="workbench-part-levels">${levelStars}</span>
+          <span class="workbench-part-levels">${replaceEmoji(levelStars)}</span>
         </div>
         <div class="workbench-part-desc">${t('part.' + partId + '.desc')}</div>
         <div class="workbench-part-action">

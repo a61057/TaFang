@@ -1,21 +1,22 @@
 import { t } from '../config/locale.js';
+import { iconHTML } from '../ui/IconProvider.js';
 
 const BUFFS = [
-  { id: 'tower_damage', duration: 3, towerDamageMult: 1.25, icon: '⚔️' },
-  { id: 'tower_range', duration: 3, towerRangeMult: 1.2, icon: '🎯' },
-  { id: 'tower_speed', duration: 3, towerFireRateMult: 0.8, icon: '⚡' },
-  { id: 'gold_bonus', duration: 3, goldMult: 1.5, icon: '💰' },
-  { id: 'enemy_slow', duration: 3, enemySpeedMult: 0.8, icon: '❄️' },
-  { id: 'hero_power', duration: 3, heroAtkMult: 1.4, icon: '👊' },
+  { id: 'tower_damage', duration: 3, towerDamageMult: 1.25, icon: 'sword' },
+  { id: 'tower_range', duration: 3, towerRangeMult: 1.2, icon: 'target' },
+  { id: 'tower_speed', duration: 3, towerFireRateMult: 0.8, icon: 'lightning' },
+  { id: 'gold_bonus', duration: 3, goldMult: 1.5, icon: 'coin' },
+  { id: 'enemy_slow', duration: 3, enemySpeedMult: 0.8, icon: 'snow' },
+  { id: 'hero_power', duration: 3, heroAtkMult: 1.4, icon: 'fist' },
 ];
 
 const DEBUFFS = [
-  { id: 'tower_weaken', duration: 3, towerDamageMult: 0.8, icon: '🦠' },
-  { id: 'tower_nearsight', duration: 3, towerRangeMult: 0.8, icon: '🌫️' },
-  { id: 'tower_sluggish', duration: 3, towerFireRateMult: 1.25, icon: '🐌' },
-  { id: 'gold_tax', duration: 3, goldMult: 0.7, icon: '📉' },
-  { id: 'enemy_haste', duration: 3, enemySpeedMult: 1.25, icon: '💨' },
-  { id: 'lives_loss', duration: 0, livesChange: -5, icon: '💔' },
+  { id: 'tower_weaken', duration: 3, towerDamageMult: 0.8, icon: 'microbe' },
+  { id: 'tower_nearsight', duration: 3, towerRangeMult: 0.8, icon: 'fog' },
+  { id: 'tower_sluggish', duration: 3, towerFireRateMult: 1.25, icon: 'snail' },
+  { id: 'gold_tax', duration: 3, goldMult: 0.7, icon: 'chart_down' },
+  { id: 'enemy_haste', duration: 3, enemySpeedMult: 1.25, icon: 'wind' },
+  { id: 'lives_loss', duration: 0, livesChange: -5, icon: 'broken_heart' },
 ];
 
 function shuffle(arr) {
@@ -115,7 +116,7 @@ export class BuffManager {
       card.className = 'buff-card buff-card-positive';
       card.dataset.id = buff.id;
       card.innerHTML = `
-        <div class="buff-card-icon">${buff.icon}</div>
+        <div class="buff-card-icon">${iconHTML(buff.icon)}</div>
         <div class="buff-card-info">
           <div class="buff-card-name">${t('buff.' + buff.id + '.name')}</div>
           <div class="buff-card-desc">${t('buff.' + buff.id + '.desc')}</div>
@@ -136,7 +137,7 @@ export class BuffManager {
       card.className = 'buff-card buff-card-negative';
       card.dataset.id = debuff.id;
       card.innerHTML = `
-        <div class="buff-card-icon">${debuff.icon}</div>
+        <div class="buff-card-icon">${iconHTML(debuff.icon)}</div>
         <div class="buff-card-info">
           <div class="buff-card-name">${t('buff.' + debuff.id + '.name')}</div>
           <div class="buff-card-desc">${t('buff.' + debuff.id + '.desc')}</div>

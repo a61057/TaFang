@@ -21,7 +21,9 @@ import { HERO_TEMPLATES, WEAPONS } from '../config/heroData.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { COLS, ROWS, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, STARTING_GOLD, STARTING_LIVES, GAME_SPEEDS, TERRAIN, HERO_REVIVE_COST, WEATHER_TYPES, PREP_TIME } from '../config/constants.js';
 import { MiniGameManager } from '../ui/MiniGameManager.js';
+import { TutorialManager } from '../managers/TutorialManager.js';
 import { t, setLanguage, getLanguage } from '../config/locale.js';
+import { drawIcon } from '../ui/IconProvider.js';
 
 export class GameEngine extends EventEmitter {
   constructor(canvas) {
@@ -101,6 +103,7 @@ export class GameEngine extends EventEmitter {
     this.storyManager = new StoryManager(this);
     this.weatherSystem = new WeatherSystem(this);
     this.flowerManager = new FlowerManager(this);
+    this.tutorialManager = new TutorialManager(this);
 
     this._initInput();
     this._initShortcuts();
@@ -168,6 +171,11 @@ export class GameEngine extends EventEmitter {
     if (mode === 'endless') {
       this.waveManager.totalWaves = Infinity;
       this.waveManager.isInfinite = true;
+    } else if (mode === 'tutorial') {
+      this.waveManager.totalWaves = 3;
+      this.waveManager.isInfinite = false;
+      this.gold = 999;
+      this.lives = 99;
     } else {
       this.waveManager.totalWaves = 50;
       this.waveManager.isInfinite = false;
@@ -175,6 +183,9 @@ export class GameEngine extends EventEmitter {
     this.start();
     if (mode === 'campaign') {
       this.storyManager.onWaveStart(0);
+    }
+    if (mode === 'tutorial') {
+      this.tutorialManager.start();
     }
   }
 
@@ -221,7 +232,7 @@ export class GameEngine extends EventEmitter {
     this.waveManager.update(dt);
 
     // 触发随机事件
-    if (this.waveManager.waveInProgress) {
+    if (this.waveManager.waveInProgress && this.gameMode !== 'tutorial') {
       this.eventSystem.onWaveStart(this.waveManager.currentWave);
     }
 
@@ -268,6 +279,7 @@ export class GameEngine extends EventEmitter {
 
     this.particles.update(dt);
     this.flowerManager.update(dt);
+    if (this.gameMode === 'tutorial') this.tutorialManager.update();
 
     // 英雄碰撞检测（撞人 & 受伤）
     this._heroCollisionCooldown = Math.max(0, this._heroCollisionCooldown - dt);
@@ -430,7 +442,8 @@ export class GameEngine extends EventEmitter {
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
         const name = t('flower.' + v.id + '.name');
-        ctx.fillText(canAfford ? `🌻 ${name} ${v.cost}g` : t('flower.notEnoughGold'), tx + TILE_SIZE / 2, ty - 4);
+        drawIcon(ctx, 'flower', tx + TILE_SIZE / 2 - 8, ty - 16, 14);
+        ctx.fillText(canAfford ? `${name} ${v.cost}g` : t('flower.notEnoughGold'), tx + TILE_SIZE / 2, ty - 4);
       }
     }
 
@@ -549,6 +562,7 @@ export class GameEngine extends EventEmitter {
       // M 回主菜单并自动存档
       if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
+        if (this.gameMode === 'tutorial') this.tutorialManager.end();
         this.saveGame(0);
         this.audio.stopBGM();
         this.running = false;
@@ -669,6 +683,7 @@ export class GameEngine extends EventEmitter {
       this.selectedTower = existingTower;
       this.selectedTile = { col, row };
       this.ui.towerInfo.show(existingTower);
+      this.emit('tower-info-show', existingTower);
       return;
     }
 
@@ -690,11 +705,12 @@ export class GameEngine extends EventEmitter {
       return;
     }
 
-    // Any empty tile shows build menu on the left
+    // Any empty tile shows build menu near cursor
     this.ui.towerInfo.hide();
     this.selectedTower = null;
     this.selectedTile = { col, row };
-    this.ui.buildMenu.show(col, row);
+    this.ui.buildMenu.show(col, row, e.clientX, e.clientY);
+    this.emit('build-menu-show', col, row);
   }
 
   _handleRightClick(e) {
@@ -792,6 +808,9 @@ export class GameEngine extends EventEmitter {
     this.audio.playWaveStart();
     this.waveManager.startNextWave();
     this.storyManager.onWaveStart(this.waveManager.currentWave);
+    if (this.gameMode === 'tutorial') {
+      this.emit('wave-started', this.waveManager.currentWave);
+    }
   }
 
   _toggleLanguage() {
@@ -846,6 +865,7 @@ export class GameEngine extends EventEmitter {
     this.stats.towersBuilt++;
     this._checkAchievements();
     this.audio.playBuild();
+    this.emit('tower-built', tower);
     this.particles.emit(tower.x, tower.y, 15, {
       color: '#ffdd44',
       speed: 100,
@@ -863,6 +883,7 @@ export class GameEngine extends EventEmitter {
     this.gold -= cost;
     tower.upgrade();
     this.audio.playUpgrade();
+    this.emit('tower-upgraded', tower);
     this.particles.emit(tower.x, tower.y, 12, {
       color: '#66ff66',
       speed: 80,
@@ -1041,6 +1062,10 @@ export class GameEngine extends EventEmitter {
     this.gameOver = true;
     this.audio.stopBGM();
     this.audio.playGameOver();
+    if (this.gameMode === 'tutorial') {
+      this.ui.gameOver.show('defeat');
+      return;
+    }
     const reason = this.gameMode === 'campaign' ? 'defeat' : 'defeat';
     this.ui.gameOver.show(reason);
     if (window.electronAPI) {
@@ -1305,5 +1330,13 @@ export class GameEngine extends EventEmitter {
 
   showLoadDialog() {
     this.ui.showSaveLoad('load');
+  }
+
+  _onTutorialEnd() {
+    this.saveGame(0);
+    this.audio.stopBGM();
+    this.running = false;
+    document.getElementById('gameContainer').style.display = 'none';
+    this.mainMenu.show();
   }
 }

@@ -1,5 +1,6 @@
 import { FLOWER_VARIETIES } from '../managers/FlowerManager.js';
 import { t } from '../config/locale.js';
+import { iconHTML } from './IconProvider.js';
 
 export class FlowerPopup {
   constructor(gameEngine) {
@@ -61,21 +62,21 @@ export class FlowerPopup {
     this.element.style.display = 'block';
 
     const name = t('flower.' + v.id + '.name');
-    this.element.querySelector('#flowerName').textContent = `🌸 ${name}`;
+    this.element.querySelector('#flowerName').innerHTML = `${iconHTML('cherry')} ${name}`;
 
     const infoHtml = `
-      <div class="stat-row"><span>${t('workbench.total')}</span><span>💰${v.cost}</span></div>
+      <div class="stat-row"><span>${t('workbench.total')}</span><span>${iconHTML('coin')}${v.cost}</span></div>
       <div class="stat-row"><span>${t('flower.count')}</span><span>1</span></div>
       ${mature
-        ? `<div class="stat-row" style="color:#ffd700;"><span>💰 ${t('flower.sell')}</span><span>+${v.sellPrice}g</span></div>`
-        : `<div class="stat-row" style="color:#889;"><span>⏳ ${t('flower.matureIn')}</span><span>${remaining} ${t('flower.waves')}</span></div>`
+        ? `<div class="stat-row" style="color:#ffd700;"><span>${iconHTML('coin')} ${t('flower.sell')}</span><span>+${v.sellPrice}g</span></div>`
+        : `<div class="stat-row" style="color:#889;"><span>${iconHTML('hourglass')} ${t('flower.matureIn')}</span><span>${remaining} ${t('flower.waves')}</span></div>`
       }
     `;
     this.element.querySelector('#flowerInfo').innerHTML = infoHtml;
 
     const sellBtn = this.element.querySelector('#btnFlowerSell');
     if (mature) {
-      sellBtn.textContent = `${t('flower.harvest')} (💰${v.sellPrice})`;
+      sellBtn.innerHTML = `${t('flower.harvest')} (${iconHTML('coin')}${v.sellPrice})`;
       sellBtn.disabled = false;
       sellBtn.style.display = 'block';
     } else {

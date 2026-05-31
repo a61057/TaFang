@@ -4,6 +4,7 @@ import { TowerInfoPanel } from './TowerInfoPanel.js';
 import { FlowerPopup } from './FlowerPopup.js';
 import { GameOverScreen } from './GameOverScreen.js';
 import { t } from '../config/locale.js';
+import { iconHTML, iconElem, replaceEmoji } from './IconProvider.js';
 
 export class UIManager {
   constructor(gameEngine) {
@@ -64,7 +65,7 @@ export class UIManager {
         slotEl.innerHTML = `
           <div class="slot-number">${t('ui.slot', i)}</div>
           <div class="slot-info">${saveData ? new Date(saveData.modified).toLocaleString() : t('ui.empty')}</div>
-          ${saveData ? `<button class="slot-action" data-slot="${i}" data-action="delete">🗑</button>` : ''}
+          ${saveData ? `<button class="slot-action" data-slot="${i}" data-action="delete">${iconHTML('trash')}</button>` : ''}
         `;
         slotEl.addEventListener('click', () => {
           if (mode === 'save') {
@@ -108,7 +109,7 @@ export class UIManager {
     if (!enemy) { this.hideTooltip(); return; }
     const hpPct = Math.round((enemy.hp / enemy.maxHp) * 100);
     this.tooltip.innerHTML = `
-      <div class="tt-name" style="color:${enemy.color}">${enemy.isBoss ? '👑 ' : ''}${t(`enemy.${enemy.type}.name`, enemy.type) || t('ui.enemy')}</div>
+      <div class="tt-name" style="color:${enemy.color}">${enemy.isBoss ? iconHTML('crown') + ' ' : ''}${t(`enemy.${enemy.type}.name`, enemy.type) || t('ui.enemy')}</div>
       <div class="tt-stat">${t('ui.ttHp', enemy.hp, enemy.maxHp, hpPct)}</div>
       <div class="tt-stat">${t('ui.ttSpeed', enemy.baseSpeed.toFixed(0))}</div>
       <div class="tt-stat">${t('ui.ttArmor', enemy.armor)}</div>
@@ -130,8 +131,8 @@ export class UIManager {
   showEventNotification(evt) {
     const el = document.createElement('div');
     el.className = 'notification event-notification';
-    const icons = { positive: '✅', negative: '⚠️', neutral: '📦' };
-    el.innerHTML = `${icons[evt.type] || '📌'} ${t('event.' + evt.id)}`;
+    const icons = { positive: 'check', negative: 'skull', neutral: 'box' };
+    el.innerHTML = `${iconHTML(icons[evt.type] || 'pin')} ${t('event.' + evt.id)}`;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 4000);
   }
@@ -139,7 +140,7 @@ export class UIManager {
   showFactionNotification(bonuses) {
     const entries = Object.entries(bonuses);
     if (entries.length === 0) return;
-    const lines = entries.map(([f, thresholds]) => `🏴 ${t('faction.' + f)} ${Math.max(...thresholds)}/9`).join('<br>');
+    const lines = entries.map(([f, thresholds]) => `${iconHTML('flag')} ${t('faction.' + f)} ${Math.max(...thresholds)}/9`).join('<br>');
     const el = document.createElement('div');
     el.className = 'notification faction-notification';
     el.innerHTML = lines;
@@ -148,10 +149,10 @@ export class UIManager {
   }
 
   showWeatherNotification(weather) {
-    const icons = { clear: '☀️', rainy: '🌧️', storm: '⛈️', blizzard: '❄️', fog: '🌫️' };
+    const icons = { clear: 'sun', rainy: 'rain', storm: 'storm', blizzard: 'snow', fog: 'fog' };
     const el = document.createElement('div');
     el.className = 'notification weather-notification';
-    el.innerHTML = `${icons[weather.id] || '🌤️'} ${t('weather.' + weather.id)}`;
+    el.innerHTML = `${iconHTML(icons[weather.id] || 'sun')} ${t('weather.' + weather.id)}`;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 3000);
   }

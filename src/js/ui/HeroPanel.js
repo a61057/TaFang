@@ -1,5 +1,6 @@
 import { t } from '../config/locale.js';
 import { HERO_TEMPLATES, WEAPONS, MAX_EQUIPPED } from '../config/heroData.js';
+import { iconHTML } from './IconProvider.js';
 
 export class HeroPanel {
   constructor(engine) {
@@ -75,7 +76,7 @@ export class HeroPanel {
 
       let actionHtml = '';
       if (isPlayer && deployed) {
-        actionHtml = '<span class="hero-badge">✓</span>';
+        actionHtml = `<span class="hero-badge">${iconHTML('check')}</span>`;
       } else if (deployed) {
         actionHtml = `<button class="hero-btn unequip-btn" data-id="${id}" data-action="undeploy">${t('hero.undeploy')}</button>`;
       } else if (owned && mgr.canDeploy()) {

@@ -1,5 +1,6 @@
 import { t, getLanguage } from '../config/locale.js';
 import { SPEAKER_NAMES } from '../config/storyData.js';
+import { iconHTML } from './IconProvider.js';
 
 export class DialogueBox {
   constructor() {
@@ -22,7 +23,7 @@ export class DialogueBox {
           <div class="dialogue-speaker-name"></div>
         </div>
         <div class="dialogue-text"></div>
-        <div class="dialogue-continue">▼</div>
+        <div class="dialogue-continue"></div>
       </div>
     `;
     document.body.appendChild(this.element);
@@ -81,17 +82,17 @@ export class DialogueBox {
 
     if (d.side === 'ally') {
       this._speakerIcon.style.background = '#4a90d9';
-      this._speakerIcon.textContent = '🛡';
+      this._speakerIcon.innerHTML = iconHTML('shield');
     } else {
       this._speakerIcon.style.background = '#e74c3c';
-      this._speakerIcon.textContent = '⚔';
+      this._speakerIcon.innerHTML = iconHTML('sword');
     }
 
-    this._textEl.textContent = t(d.textKey);
+    this._textEl.innerHTML = t(d.textKey);
 
     const isLast = index >= this._dialogues.length - 1;
     this._continueEl.style.opacity = isLast ? '0.6' : '1';
-    this._continueEl.textContent = isLast ? '✕' : '▼';
+    this._continueEl.innerHTML = isLast ? iconHTML('check') : iconHTML('arrow_down');
 
     this.element.querySelector('.dialogue-content').style.animation = 'none';
     requestAnimationFrame(() => {

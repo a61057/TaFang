@@ -1,4 +1,5 @@
 import { t } from '../config/locale.js';
+import { iconHTML } from './IconProvider.js';
 
 const GAME_TYPES = ['whack', 'catch', 'memory', 'shoot'];
 
@@ -135,7 +136,7 @@ export class MiniGameManager {
           ${Array.from({length: cols * rows}, (_, i) => `
             <div class="mg-hole" data-idx="${i}">
               <div class="mg-hole-bg"></div>
-              <div class="mg-mole" id="mole${i}" style="display:none">👾</div>
+              <div class="mg-mole" id="mole${i}" style="display:none">${iconHTML('alien')}</div>
             </div>
           `).join('')}
         </div>
@@ -154,8 +155,8 @@ export class MiniGameManager {
           grid[i] = false;
           const moleEl = document.getElementById(`mole${i}`);
           moleEl.style.display = 'none';
-          moleEl.textContent = '💥';
-          setTimeout(() => { moleEl.textContent = '👾'; }, 200);
+          moleEl.innerHTML = iconHTML('explosion');
+          setTimeout(() => { moleEl.innerHTML = iconHTML('alien'); }, 200);
           activeMole = null;
         }
       });
@@ -225,10 +226,10 @@ export class MiniGameManager {
     });
 
     const itemTypes = [
-      { emoji: '🪙', points: 5, color: '#ffd700', speed: 1.2 },
-      { emoji: '💎', points: 20, color: '#66ccff', speed: 1.5 },
-      { emoji: '💣', points: -10, color: '#ff4444', speed: 0.8 },
-      { emoji: '⭐', points: 15, color: '#ffdd44', speed: 1.0 }
+      { icon: 'coin', points: 5, color: '#ffd700', speed: 1.2 },
+      { icon: 'gem', points: 20, color: '#66ccff', speed: 1.5 },
+      { icon: 'bomb', points: -10, color: '#ff4444', speed: 0.8 },
+      { icon: 'star', points: 15, color: '#ffdd44', speed: 1.0 }
     ];
 
     const spawnItem = () => {
@@ -241,7 +242,7 @@ export class MiniGameManager {
         type: type,
         el: document.createElement('div')
       };
-      item.el.textContent = type.emoji;
+      item.el.innerHTML = iconHTML(type.icon);
       item.el.style.cssText = `position:absolute;left:${item.x}px;top:${item.y}px;font-size:22px;transition:none;pointer-events:none;z-index:10;`;
       area.appendChild(item.el);
       this._gameItems.push(item);
@@ -290,15 +291,15 @@ export class MiniGameManager {
     const gridSize = 4;
     let score = 0, flips = 0;
     let firstCard = null, secondCard = null, lockBoard = false;
-    const emojis = ['🗼', '⚔️', '🛡️', '👾', '🚀', '💎', '🔥', '⭐'];
-    let cards = [...emojis, ...emojis];
+    const icons = ['tower', 'sword', 'shield', 'alien', 'rocket', 'gem', 'fire', 'star'];
+    let cards = [...icons, ...icons];
     for (let i = cards.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [cards[i], cards[j]] = [cards[j], cards[i]];
     }
 
     let matched = 0;
-    const totalPairs = emojis.length;
+    const totalPairs = icons.length;
 
     const html = `
       <div class="mg-container">
@@ -312,7 +313,7 @@ export class MiniGameManager {
             <div class="mg-card" data-idx="${i}">
               <div class="mg-card-inner">
                 <div class="mg-card-front">?</div>
-                <div class="mg-card-back">${_}</div>
+                <div class="mg-card-back">${iconHTML(_)}</div>
               </div>
             </div>
           `).join('')}

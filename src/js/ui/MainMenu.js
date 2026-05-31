@@ -1,9 +1,10 @@
 import { t } from '../config/locale.js';
 
 export class MainMenu {
-  constructor(onCampaign, onEndless, onLoadGame, onSettings, onAchievements) {
+  constructor(onCampaign, onEndless, onTutorial, onLoadGame, onSettings, onAchievements) {
     this.onCampaign = onCampaign;
     this.onEndless = onEndless;
+    this.onTutorial = onTutorial;
     this.onLoadGame = onLoadGame;
     this.onSettings = onSettings;
     this.onAchievements = onAchievements;
@@ -24,6 +25,10 @@ export class MainMenu {
             <span class="menu-btn-label">${t('menu.campaign')}</span>
             <span class="menu-btn-desc">${t('menu.campaignDesc')}</span>
           </button>
+          <button class="menu-btn" id="menuTutorial">
+            <span class="menu-btn-label">${t('menu.tutorial')}</span>
+            <span class="menu-btn-desc">${t('menu.tutorialDesc')}</span>
+          </button>
           <button class="menu-btn" id="menuEndless">
             <span class="menu-btn-label">${t('menu.endless')}</span>
             <span class="menu-btn-desc">${t('menu.endlessDesc')}</span>
@@ -40,6 +45,11 @@ export class MainMenu {
     this.element.querySelector('#menuCampaign').addEventListener('click', () => {
       this.hide();
       this.onCampaign();
+    });
+
+    this.element.querySelector('#menuTutorial').addEventListener('click', () => {
+      this.hide();
+      this.onTutorial();
     });
 
     this.element.querySelector('#menuEndless').addEventListener('click', () => {

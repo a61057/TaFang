@@ -1,6 +1,7 @@
 import { TILE_SIZE, MAX_TOWER_LEVEL } from '../config/constants.js';
 import { TOWER_TYPES, getTowerStats } from '../config/towerData.js';
 import { PARTS, getPartStats } from '../config/partShop.js';
+import { drawIcon } from '../ui/IconProvider.js';
 
 export class Tower {
   constructor() {
@@ -492,11 +493,10 @@ export class Tower {
         }
         ctx.restore();
         // Skull icon
+        ctx.save();
         ctx.fillStyle = '#44ff44';
         ctx.globalAlpha = 0.6;
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('☠', x, y - 10);
+        drawIcon(ctx, 'skull2', x - 10, y - 26, 20);
         ctx.globalAlpha = 1;
         // Base plate
         ctx.fillStyle = '#2a3a2a';

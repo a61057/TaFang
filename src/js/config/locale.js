@@ -13,6 +13,18 @@ export function t(key, ...args) {
   return str;
 }
 
+export function th(key, ...args) {
+  return replaceEmoji(t(key, ...args));
+}
+
+let _replaceEmojiFn = (s) => s;
+export function setEmojiReplacer(fn) {
+  _replaceEmojiFn = fn;
+}
+function replaceEmoji(s) {
+  return _replaceEmojiFn(s);
+}
+
 export function setLanguage(lang) {
   if (locales[lang]) {
     currentLang = lang;

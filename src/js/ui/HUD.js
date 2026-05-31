@@ -1,6 +1,7 @@
-import { t } from '../config/locale.js';
+import { t, th } from '../config/locale.js';
 import { HERO_REVIVE_COST } from '../config/constants.js';
 import { FLOWER_VARIETIES } from '../managers/FlowerManager.js';
+import { iconHTML, iconElem } from './IconProvider.js';
 
 export class HUD {
   constructor(gameEngine) {
@@ -30,7 +31,7 @@ export class HUD {
         </div>
         <div class="hud-center">
           <div class="hud-title">${t('hud.title')}</div>
-          <div class="hud-subtitle" id="weatherDisplay">☀️ ${t('weather.clear')}</div>
+          <div class="hud-subtitle" id="weatherDisplay">${iconHTML('sun')} ${t('weather.clear')}</div>
         </div>
         <div class="hud-right">
           <div class="hud-item gold-info">
@@ -42,7 +43,7 @@ export class HUD {
             <span class="hud-value" id="livesDisplay">20</span>
           </div>
           <div class="hud-item flower-info">
-            <span class="hud-label">🌸</span>
+            <span class="hud-label">${iconHTML('cherry')}</span>
             <span class="hud-value" id="flowerCount">0</span>
           </div>
         </div>
@@ -50,13 +51,13 @@ export class HUD {
       <div class="hud-bottom">
         <div class="hud-controls">
           <button class="hud-btn" id="btnStartWave" title="${t('hud.nextWave')}">${t('hud.nextWave')}</button>
-          <button class="hud-btn" id="btnToggleSpeed" title="${t('ui.cycleSpeed')}">⏩ ${t('settings.speed1x')}</button>
+          <button class="hud-btn" id="btnToggleSpeed" title="${t('ui.cycleSpeed')}">${iconHTML('ffwd')} ${t('settings.speed1x')}</button>
           <button class="hud-btn" id="btnPause" title="${t('hud.pause')}">${t('hud.pause')}</button>
            <button class="hud-btn" id="btnSave" title="${t('hud.save')}">${t('hud.save')}</button>
           <button class="hud-btn" id="btnLoad" title="${t('hud.load')}">${t('hud.load')}</button>
           <button class="hud-btn" id="btnHeroPanel" title="${t('hero.panel')}">${t('hero.panel')}</button>
           <button class="hud-btn" id="btnSettings" title="${t('hud.settings')}">${t('hud.settings')}</button>
-          <button class="hud-btn" id="btnFlowerMode" title="${t('flower.plantCost')}">🌻 ${t('flower.plant')}</button>
+          <button class="hud-btn" id="btnFlowerMode" title="${t('flower.plantCost')}">${iconHTML('flower')} ${t('flower.plant')}</button>
           <button class="hud-btn" id="btnReviveHero" title="${t('hud.reviveHero')}" style="display:none;">${t('hud.reviveHero')}</button>
         </div>
         <div class="hud-prep-info" id="prepInfo">
@@ -134,7 +135,7 @@ export class HUD {
   updateSpeedDisplay() {
     const btn = this.element.querySelector('#btnToggleSpeed');
     const speeds = [t('settings.speed1x'), t('settings.speed2x'), t('settings.speed4x')];
-    btn.textContent = `⏩ ${speeds[this.engine.gameSpeedIndex] || t('settings.speed1x')}`;
+    btn.innerHTML = `${iconHTML('ffwd')} ${speeds[this.engine.gameSpeedIndex] || t('settings.speed1x')}`;
   }
 
   update() {
@@ -146,6 +147,18 @@ export class HUD {
         this.modeDisplay.className = 'hud-mode-label';
         this.modeDisplay.textContent = t('hud.modeEndless');
         this.element.querySelector('.hud-center').appendChild(this.modeDisplay);
+      }
+    } else if (state.gameMode === 'tutorial') {
+      this.waveDisplay.textContent = `${state.currentWave} / ${state.totalWaves}`;
+      if (!this.modeDisplay) {
+        this.modeDisplay = document.createElement('span');
+        this.modeDisplay.className = 'hud-mode-label tutorial-label';
+        this.modeDisplay.textContent = t('hud.modeTutorial');
+        this.element.querySelector('.hud-center').appendChild(this.modeDisplay);
+        ['btnSave','btnLoad','btnHeroPanel','btnSettings','btnFlowerMode','btnReviveHero'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
       }
     } else {
       this.waveDisplay.textContent = `${state.currentWave} / ${state.totalWaves}`;
@@ -159,7 +172,7 @@ export class HUD {
     this.livesDisplay.textContent = state.lives;
     const totalFlowers = state.flowerCount || 0;
     const matureFlowers = this.engine.flowerManager.getMatureCount();
-    this.flowerCount.textContent = matureFlowers > 0 ? `💰${matureFlowers}/${totalFlowers}` : `${totalFlowers}`;
+    this.flowerCount.innerHTML = matureFlowers > 0 ? `${iconHTML('coin')}${matureFlowers}/${totalFlowers}` : `${totalFlowers}`;
     this._updateFlowerBtn();
     this.fpsDisplay.textContent = t('hud.fps', state.fps);
 
@@ -167,7 +180,7 @@ export class HUD {
       const h = this.engine.hero;
       const typeName = h._template ? t(h._template.nameKey) : '';
       const deployedStr = this.engine.heroes ? `[${this.engine.heroes.filter(hh => hh.alive).length}/${this.engine.heroManager.maxHeroSlots}]` : '';
-      this.heroDisplay.textContent = `${typeName} ${t('hero.level', h.level)} ${deployedStr} ${h.alive ? t('hero.alive') : t('hero.dead')}`;
+      this.heroDisplay.innerHTML = `${typeName} ${t('hero.level', h.level)} ${deployedStr} ${h.alive ? th('hero.alive') : th('hero.dead')}`;
       this.reviveBtn.style.display = (!h.alive && this.engine.gold >= HERO_REVIVE_COST) ? 'inline-block' : 'none';
     }
 
@@ -176,17 +189,17 @@ export class HUD {
     if (this.engine.weatherSystem) {
       const w = this.engine.weatherSystem;
       const wId = w.currentWeather.id;
-      const icons = { clear: '☀️', rainy: '🌧️', storm: '⛈️', blizzard: '❄️', fog: '🌫️' };
-      const night = w.isNight() ? '🌙' : '';
-      this.weatherDisplay.textContent = `${night}${icons[wId] || '☀️'} ${t('weather.' + wId)}`;
+      const icons = { clear: 'sun', rainy: 'rain', storm: 'storm', blizzard: 'snow', fog: 'fog' };
+      const night = w.isNight() ? iconHTML('moon') : '';
+      this.weatherDisplay.innerHTML = `${night}${iconHTML(icons[wId] || 'sun')} ${t('weather.' + wId)}`;
     }
 
     if (this.engine.eventSystem && this.engine.eventSystem.activeEvent) {
       const evt = this.engine.eventSystem.activeEvent;
-      const icons = { positive: '✅', negative: '⚠️', neutral: '📦' };
+      const icons = { positive: 'check', negative: 'skull', neutral: 'box' };
       const dur = this.engine.eventSystem.activeDuration;
       this.eventDisplay.style.display = 'flex';
-      this.eventDisplay.innerHTML = `${icons[evt.type] || '📌'} ${t('event.' + evt.id)}${dur > 0 ? ` (${dur} ${t('event.waves')})` : ''}`;
+      this.eventDisplay.innerHTML = `${iconHTML(icons[evt.type] || 'pin')} ${t('event.' + evt.id)}${dur > 0 ? ` (${dur} ${t('event.waves')})` : ''}`;
     } else if (this.eventDisplay) {
       this.eventDisplay.style.display = 'none';
     }
@@ -208,12 +221,12 @@ export class HUD {
     const v = this.engine.flowerManager.selectedVariety;
     const name = t('flower.' + v.id + '.name');
     if (this.engine.flowerMode) {
-      this.flowerBtn.textContent = `🌻 ${name} (${v.cost}g)`;
+      this.flowerBtn.innerHTML = `${iconHTML('flower')} ${name} (${v.cost}g)`;
       this.flowerBtn.title = t('flower.clickCycle');
       this.flowerBtn.style.background = 'rgba(255, 200, 100, 0.25)';
       this.flowerBtn.style.borderColor = '#ffdd44';
     } else {
-      this.flowerBtn.textContent = `🌻 ${t('flower.plant')}`;
+      this.flowerBtn.innerHTML = `${iconHTML('flower')} ${t('flower.plant')}`;
       this.flowerBtn.title = t('flower.plantCost');
       this.flowerBtn.style.background = '';
       this.flowerBtn.style.borderColor = '';

@@ -7,7 +7,7 @@ const server = http.createServer((req, res) => {
   const fp = path.join(dir, f);
   if (!fs.existsSync(fp)) { res.writeHead(404); res.end('404'); return; }
   const ext = path.extname(fp);
-  const types = { '.html':'text/html','.css':'text/css','.js':'application/javascript','.png':'image/png','.json':'application/json' };
+  const types = { '.html':'text/html','.css':'text/css','.js':'application/javascript','.png':'image/png','.json':'application/json','.mp3':'audio/mpeg','.wav':'audio/wav','.ogg':'audio/ogg' };
   res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' });
   res.end(fs.readFileSync(fp));
 });

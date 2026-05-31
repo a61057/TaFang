@@ -1,8 +1,9 @@
 import { GameEngine } from './engine/GameEngine.js';
 import { GRID_WIDTH, GRID_HEIGHT } from './config/constants.js';
 import { ACHIEVEMENTS } from './config/achievements.js';
-import { t, getLanguage, setLanguage } from './config/locale.js';
+import { t, th, getLanguage, setLanguage, setEmojiReplacer } from './config/locale.js';
 import { MainMenu } from './ui/MainMenu.js';
+import { initIconProvider, replaceEmoji, iconHTML, iconElem } from './ui/IconProvider.js';
 
 let engine = null;
 let mainMenu = null;
@@ -12,6 +13,8 @@ const achName = document.getElementById('achName');
 const achDesc = document.getElementById('achDesc');
 
 function init() {
+  initIconProvider();
+  setEmojiReplacer(replaceEmoji);
   const hash = window.location.hash;
 
   // Child windows - don't start game engine
@@ -41,6 +44,9 @@ function init() {
     },
     () => { // Endless
       engine.startGame('endless');
+    },
+    () => { // Tutorial
+      engine.startGame('tutorial');
     },
     () => { // Load Game
       engine.showLoadDialog();
@@ -80,23 +86,23 @@ function init() {
   });
 
   engine.on('random-event', (evt) => {
-    const icons = { positive: '✅', negative: '⚠️', neutral: '📦' };
-    showNotification(`${icons[evt.type] || '📌'} ${t('event.' + evt.id)}`);
+    const icons = { positive: 'check', negative: 'skull', neutral: 'box' };
+    showNotification(`${iconHTML(icons[evt.type] || 'pin')} ${t('event.' + evt.id)}`);
   });
 
   engine.on('weather-change', (weather) => {
-    const icons = { clear: '☀️', rainy: '🌧️', storm: '⛈️', blizzard: '❄️', fog: '🌫️' };
-    showNotification(`${icons[weather.id] || '🌤️'} ${t('weather.' + weather.id)}`);
+    const icons = { clear: 'sun', rainy: 'rain', storm: 'storm', blizzard: 'snow', fog: 'fog' };
+    showNotification(`${iconHTML(icons[weather.id] || 'sun')} ${t('weather.' + weather.id)}`);
   });
 
   engine.on('daynight-change', (phase) => {
-    showNotification(phase === 0 ? t('notify.day') : t('notify.night'));
+    showNotification(phase === 0 ? th('notify.day') : th('notify.night'));
   });
 
   engine.on('faction-change', (bonuses) => {
     const entries = Object.entries(bonuses);
     if (entries.length === 0) return;
-    const lines = entries.map(([f, thresholds]) => `🏴 ${t('faction.' + f)} ${Math.max(...thresholds)}/9`).join(' ');
+    const lines = entries.map(([f, thresholds]) => `${iconHTML('flag')} ${t('faction.' + f)} ${Math.max(...thresholds)}/9`).join(' ');
     showNotification(lines);
   });
 }
@@ -126,9 +132,9 @@ function handleResize() {
 function showAchievementNotification(ach) {
   const achNameKey = `achievement.${ach.id}.name`;
   const achDescKey = `achievement.${ach.id}.desc`;
-  achIcon.textContent = ach.icon || '🏆';
-  achName.textContent = t(achNameKey);
-  achDesc.textContent = t(achDescKey);
+  achIcon.innerHTML = replaceEmoji(ach.icon);
+  achName.innerHTML = th(achNameKey);
+  achDesc.innerHTML = th(achDescKey);
   achievementNotifyEl.classList.add('show');
   setTimeout(() => {
     achievementNotifyEl.classList.remove('show');
@@ -138,7 +144,7 @@ function showAchievementNotification(ach) {
 function showNotification(text) {
   const el = document.createElement('div');
   el.className = 'notification';
-  el.textContent = text;
+  el.innerHTML = text;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3000);
 }
@@ -343,7 +349,7 @@ function initAchievementsWindow() {
     const achNameKey = `achievement.${ach.id}.name`;
     const achDescKey = `achievement.${ach.id}.desc`;
     div.innerHTML = `
-      <span style="font-size:28px;opacity:${unlocked ? 1 : 0.3};">${ach.icon}</span>
+      <span style="font-size:28px;opacity:${unlocked ? 1 : 0.3};">${replaceEmoji(ach.icon)}</span>
       <div>
         <div style="font-weight:600;color:${unlocked ? '#ffd700' : '#667'};">${t(achNameKey)}</div>
         <div style="font-size:12px;color:#889;">${t(achDescKey)}</div>

@@ -1,5 +1,6 @@
 import { TILE_SIZE, TERRAIN } from '../config/constants.js';
 import { t } from '../config/locale.js';
+import { drawIcon } from '../ui/IconProvider.js';
 
 export const FLOWER_VARIETIES = [
   { id: 'daisy',    cost: 30,  sellPrice: 45,  petals: 8,  petalR: 3,   color: '#ffffff', center: '#ffdd44', stem: '#3a7a3a' },
@@ -177,9 +178,7 @@ export class FlowerManager {
       if (mature) {
         ctx.fillStyle = '#ffdd44';
         ctx.globalAlpha = 0.6 + Math.sin(time * 4) * 0.3;
-        ctx.font = 'bold 7px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('💰', x + sway, y - 8);
+        drawIcon(ctx, 'coin', x + sway - 6, y - 18, 12);
       }
 
       ctx.restore();

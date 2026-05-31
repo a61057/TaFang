@@ -1,4 +1,5 @@
 import { COLS, ROWS, TILE_SIZE, TERRAIN, TERRAIN_COLORS, GRID_WIDTH, GRID_HEIGHT } from '../config/constants.js';
+import { drawIcon } from '../ui/IconProvider.js';
 
 const DEFAULT_PATH = [
   { col: 0, row: 5 }, { col: 3, row: 5 }, { col: 3, row: 2 }, { col: 8, row: 2 },
@@ -229,19 +230,15 @@ export class GameMap {
         if (t === TERRAIN.START) {
           ctx.fillStyle = 'rgba(74, 144, 217, 0.3)';
           ctx.fillRect(x, y, this.tileSize, this.tileSize);
-          ctx.fillStyle = '#4a90d9';
-          ctx.font = '16px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('▶', x + this.tileSize / 2, y + this.tileSize / 2);
+          drawIcon(ctx, 'play', x + this.tileSize / 2 - 8, y + this.tileSize / 2 - 8, 16);
         } else if (t === TERRAIN.END) {
           ctx.fillStyle = 'rgba(217, 74, 74, 0.3)';
           ctx.fillRect(x, y, this.tileSize, this.tileSize);
           ctx.fillStyle = '#d94a4a';
-          ctx.font = '16px Arial';
+          ctx.font = '18px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('■', x + this.tileSize / 2, y + this.tileSize / 2);
+          ctx.fillText('X', x + this.tileSize / 2, y + this.tileSize / 2);
         }
 
         if (showGrid) {
