@@ -95,9 +95,9 @@ export class HeroPanel {
             <div class="hero-card-name">${t(tmpl.nameKey)}</div>
             <div class="hero-card-desc">${t(tmpl.descKey)}</div>
             <div class="hero-card-stats">
-              HP:${tmpl.baseHp} ATK:${tmpl.baseAttack} RNG:${tmpl.baseRange} SPD:${tmpl.baseSpeed}
+            生命:${tmpl.baseHp} 攻击:${tmpl.baseAttack} 射程:${tmpl.baseRange} 速度:${tmpl.baseSpeed}
             </div>
-            ${owned ? `<div class="hero-card-level">Lv.${data.level} XP:${data.xp}/100</div>` : ''}
+            ${owned ? `<div class="hero-card-level">等级${data.level} 经验:${data.xp}/100</div>` : ''}
           </div>
           <div class="hero-card-action">
             ${actionHtml}
@@ -145,11 +145,11 @@ export class HeroPanel {
       const owned = mgr.weaponInventory.includes(id);
       const equipped = mgr.equippedWeapons.includes(id);
       let statStr = '';
-      if (wpn.stat === 'attack') statStr = `ATK ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
-      else if (wpn.stat === 'range') statStr = `RNG ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
-      else if (wpn.stat === 'maxHp') statStr = `HP ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
-      else if (wpn.stat === 'speed') statStr = `SPD ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
-      else if (wpn.stat === 'attackSpeed') statStr = `ATKSPD ${wpn.bonus < 0 ? '' : '+'}${-wpn.bonus}s`;
+      if (wpn.stat === 'attack') statStr = `攻击 ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
+      else if (wpn.stat === 'range') statStr = `射程 ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
+      else if (wpn.stat === 'maxHp') statStr = `生命 ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
+      else if (wpn.stat === 'speed') statStr = `速度 ${wpn.bonus > 0 ? '+' : ''}${wpn.bonus}`;
+      else if (wpn.stat === 'attackSpeed') statStr = `攻速 ${wpn.bonus < 0 ? '' : '+'}${-wpn.bonus}s`;
 
       html += `
         <div class="weapon-card ${equipped ? 'equipped' : ''}">
