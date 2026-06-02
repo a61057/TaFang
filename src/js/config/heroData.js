@@ -22,6 +22,36 @@ export const HERO_TEMPLATES = {
     baseHp: 200, baseAttack: 24, baseRange: 280, baseAttackSpeed: 1.6, baseSpeed: 80,
     color: '#4a7a6a', turretColor: '#3a6a5a', cost: 300,
     descKey: 'hero.sniperDesc'
+  },
+  medic: {
+    id: 'medic', nameKey: 'hero.medic',
+    baseHp: 280, baseAttack: 12, baseRange: 140, baseAttackSpeed: 1.0, baseSpeed: 85,
+    color: '#dde', turretColor: '#ccc', cost: 200,
+    descKey: 'hero.medicDesc'
+  },
+  flame: {
+    id: 'flame', nameKey: 'hero.flame',
+    baseHp: 320, baseAttack: 30, baseRange: 100, baseAttackSpeed: 1.1, baseSpeed: 75,
+    color: '#d84', turretColor: '#c73', cost: 280,
+    descKey: 'hero.flameDesc'
+  },
+  ninja: {
+    id: 'ninja', nameKey: 'hero.ninja',
+    baseHp: 200, baseAttack: 40, baseRange: 60, baseAttackSpeed: 0.7, baseSpeed: 130,
+    color: '#869', turretColor: '#758', cost: 300,
+    descKey: 'hero.ninjaDesc'
+  },
+  engineer: {
+    id: 'engineer', nameKey: 'hero.engineer',
+    baseHp: 260, baseAttack: 10, baseRange: 160, baseAttackSpeed: 1.3, baseSpeed: 90,
+    color: '#fd0', turretColor: '#ec0', cost: 220,
+    descKey: 'hero.engineerDesc'
+  },
+  void: {
+    id: 'void', nameKey: 'hero.void',
+    baseHp: 240, baseAttack: 28, baseRange: 200, baseAttackSpeed: 1.2, baseSpeed: 95,
+    color: '#a6f', turretColor: '#95e', cost: 350,
+    descKey: 'hero.voidDesc'
   }
 };
 
@@ -55,6 +85,16 @@ export const WEAPONS = {
     id: 'prism_lens', nameKey: 'weapon.prism_lens',
     stat: 'range', bonus: 60, cost: 250,
     descKey: 'weapon.prism_lensDesc'
+  },
+  life_steal: {
+    id: 'life_steal', nameKey: 'weapon.life_steal',
+    stat: 'attack', bonus: 6, cost: 150,
+    descKey: 'weapon.life_stealDesc'
+  },
+  grenade: {
+    id: 'grenade', nameKey: 'weapon.grenade',
+    stat: 'range', bonus: 25, cost: 180,
+    descKey: 'weapon.grenadeDesc'
   }
 };
 
