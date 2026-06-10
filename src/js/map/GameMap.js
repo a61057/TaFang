@@ -1,15 +1,9 @@
 import { COLS, ROWS, TILE_SIZE, TERRAIN, TERRAIN_COLORS, GRID_WIDTH, GRID_HEIGHT } from '../config/constants.js';
 import { drawIcon } from '../ui/IconProvider.js';
-
-const DEFAULT_PATH = [
-  { col: 0, row: 5 }, { col: 3, row: 5 }, { col: 3, row: 2 }, { col: 8, row: 2 },
-  { col: 8, row: 8 }, { col: 5, row: 8 }, { col: 5, row: 12 }, { col: 10, row: 12 },
-  { col: 10, row: 6 }, { col: 14, row: 6 }, { col: 14, row: 14 }, { col: 18, row: 14 },
-  { col: 18, row: 4 }, { col: 22, row: 4 }, { col: 22, row: 9 }, { col: 23, row: 9 }
-];
+import { getMapData } from '../config/mapData.js';
 
 export class GameMap {
-  constructor() {
+  constructor(mapId = 'classic') {
     this.cols = COLS;
     this.rows = ROWS;
     this.tileSize = TILE_SIZE;
@@ -18,10 +12,18 @@ export class GameMap {
     this.startTile = null;
     this.endTile = null;
     this._decorations = null;
-    this._initDefault();
+    this.mapId = mapId;
+    this._loadMapData(mapId);
   }
 
-  _initDefault() {
+  reload(mapId) {
+    this.mapId = mapId;
+    this._loadMapData(mapId);
+  }
+
+  _loadMapData(mapId) {
+    const data = getMapData(mapId);
+
     this.grid = [];
     for (let r = 0; r < this.rows; r++) {
       this.grid[r] = [];
@@ -30,16 +32,35 @@ export class GameMap {
       }
     }
 
-    this.path = DEFAULT_PATH.map(p => ({ ...p }));
+    this.path = data.path.map(p => ({ ...p }));
 
     this.startTile = this.path[0];
     this.endTile = this.path[this.path.length - 1];
 
     this._fillPathTiles();
 
-    this._setBuildable();
+    if (data.terrainOverrides) {
+      this._applyTerrainOverrides(data.terrainOverrides);
+    }
+
+    this._setBuildable(data.buildableChance || 0.65);
 
     this._generateDecorations();
+  }
+
+  _applyTerrainOverrides(overrides) {
+    for (const ov of overrides) {
+      for (let r = ov.row; r < ov.row + ov.h; r++) {
+        for (let c = ov.col; c < ov.col + ov.w; c++) {
+          if (r >= 0 && r < this.rows && c >= 0 && c < this.cols) {
+            const t = this.grid[r][c].terrain;
+            if (t !== TERRAIN.PATH && t !== TERRAIN.START && t !== TERRAIN.END) {
+              this.grid[r][c].terrain = ov.terrain;
+            }
+          }
+        }
+      }
+    }
   }
 
   _hash(col, row, seed) {
@@ -124,12 +145,12 @@ export class GameMap {
     setTile(this.endTile.col, this.endTile.row, TERRAIN.END);
   }
 
-  _setBuildable() {
+  _setBuildable(chance = 0.65) {
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
         const t = this.grid[r][c].terrain;
         if (t === TERRAIN.NORMAL) {
-          this.grid[r][c].terrain = Math.random() < 0.35 ? TERRAIN.GRASS : TERRAIN.BUILDABLE;
+          this.grid[r][c].terrain = Math.random() < (1 - chance) ? TERRAIN.GRASS : TERRAIN.BUILDABLE;
         }
       }
     }
@@ -277,6 +298,7 @@ export class GameMap {
 
   toJSON() {
     return {
+      mapId: this.mapId,
       cols: this.cols,
       rows: this.rows,
       grid: this.grid.map(row => row.map(t => t.terrain)),
@@ -287,21 +309,23 @@ export class GameMap {
   }
 
   static fromJSON(data) {
-    const map = new GameMap();
+    const map = new GameMap(data.mapId || 'classic');
     map.cols = data.cols || COLS;
     map.rows = data.rows || ROWS;
-    map.path = data.path || [];
-    map.startTile = data.startTile || map.path[0] || null;
-    map.endTile = data.endTile || map.path[map.path.length - 1] || null;
-    map.grid = [];
-    for (let r = 0; r < map.rows; r++) {
-      map.grid[r] = [];
-      for (let c = 0; c < map.cols; c++) {
-        const terrain = data.grid && data.grid[r] ? data.grid[r][c] : TERRAIN.NORMAL;
-        map.grid[r][c] = { terrain, col: c, row: r };
+    if (data.grid) {
+      map.path = data.path || [];
+      map.startTile = data.startTile || map.path[0] || null;
+      map.endTile = data.endTile || map.path[map.path.length - 1] || null;
+      map.grid = [];
+      for (let r = 0; r < map.rows; r++) {
+        map.grid[r] = [];
+        for (let c = 0; c < map.cols; c++) {
+          const terrain = data.grid[r] ? data.grid[r][c] : TERRAIN.NORMAL;
+          map.grid[r][c] = { terrain, col: c, row: r };
+        }
       }
+      map._generateDecorations();
     }
-    map._generateDecorations();
     return map;
   }
 }

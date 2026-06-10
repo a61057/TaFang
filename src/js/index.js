@@ -7,12 +7,16 @@ import { initIconProvider, replaceEmoji, iconHTML, iconElem } from './ui/IconPro
 import { loadTheme, getThemeNames, getCurrentTheme, applyTheme } from './managers/ThemeManager.js';
 import { ChallengePanel } from './ui/ChallengePanel.js';
 import { TalentPanel } from './ui/TalentPanel.js';
+import { MapSelectPanel } from './ui/MapSelectPanel.js';
 import { getChallenge } from './config/challengeData.js';
 
 let engine = null;
 let mainMenu = null;
 let challengePanel = null;
 let talentPanel = null;
+let mapSelectPanel = null;
+let _pendingMode = null;
+let _pendingChallengeId = null;
 const achievementNotifyEl = document.getElementById('achievementNotify');
 const achIcon = document.getElementById('achIcon');
 const achName = document.getElementById('achName');
@@ -44,24 +48,46 @@ function init() {
   talentPanel = new TalentPanel();
   engine.setTalentPanel(talentPanel);
 
+  mapSelectPanel = new MapSelectPanel(
+    (mapId) => {
+      if (_pendingMode) {
+        engine.startGame(_pendingMode, mapId);
+        _pendingMode = null;
+      } else if (_pendingChallengeId) {
+        const ch = getChallenge(_pendingChallengeId);
+        if (ch) {
+          engine.startChallenge(_pendingChallengeId, ch.modifiers, ch.waves, mapId);
+        }
+        _pendingChallengeId = null;
+      }
+    },
+    () => {
+      mainMenu.show();
+    }
+  );
+
   challengePanel = new ChallengePanel((challengeId) => {
     challengePanel.hide();
     const ch = getChallenge(challengeId);
     if (ch) {
-      engine.startChallenge(challengeId, ch.modifiers, ch.waves);
+      _pendingChallengeId = challengeId;
+      mapSelectPanel.show(t('challenge.title') + ' — ' + t('map.select'));
     }
   });
 
   // Show main menu
   mainMenu = new MainMenu(
     () => { // Campaign
-      engine.startGame('campaign');
+      _pendingMode = 'campaign';
+      mapSelectPanel.show(t('menu.campaign') + ' — ' + t('map.select'));
     },
     () => { // Endless
-      engine.startGame('endless');
+      _pendingMode = 'endless';
+      mapSelectPanel.show(t('menu.endless') + ' — ' + t('map.select'));
     },
     () => { // Tutorial
-      engine.startGame('tutorial');
+      _pendingMode = 'tutorial';
+      mapSelectPanel.show(t('menu.tutorial') + ' — ' + t('map.select'));
     },
     () => { // Load Game
       engine.showLoadDialog();

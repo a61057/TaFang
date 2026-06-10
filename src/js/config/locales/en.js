@@ -682,4 +682,17 @@ export const en = {
   'challenge.swarm.desc': '3x enemy count, enemies are smaller',
   'challenge.one_hero.name': 'Lone Hero',
   'challenge.one_hero.desc': 'No towers, hero only',
+
+  // Maps
+  'map.select': 'Select Map',
+  'map.back': 'Back',
+  'map.selectMap': 'Select',
+  'map.classic.name': 'Classic',
+  'map.classic.desc': 'Standard zigzag path, balanced layout, suitable for all modes',
+  'map.canyon.name': 'Canyon',
+  'map.canyon.desc': 'Long serpentine path through a narrow canyon, very few buildable tiles, extreme challenge',
+  'map.ring.name': 'Ring',
+  'map.ring.desc': 'Ring-shaped path circling the central area, ideal for splash damage towers',
+  'map.frozen.name': 'Frozen Lake',
+  'map.frozen.desc': 'Straight path across a frozen lake, swamps on both sides prevent building, focus your firepower',
 };

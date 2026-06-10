@@ -1864,6 +1864,23 @@ html, body {
 .challenge-status { font-size: 12px; color: #aab; text-align: right; white-space: nowrap; padding-left: 12px; }
 .challenge-footer { display: flex; justify-content: center; padding: 12px; }
 
+/* ===== Map Select Panel ===== */
+.map-select-panel { z-index: 200; }
+.map-select-content { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 30px; max-width: 760px; width: 90%; }
+.map-select-title { font-size: 22px; font-weight: bold; color: #dde; text-align: center; }
+.map-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; }
+.map-card { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.15s; }
+.map-card:hover { background: rgba(255,255,255,0.09); border-color: rgba(100,200,255,0.3); transform: translateY(-2px); }
+.map-preview { width: 160px; height: 120px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); image-rendering: pixelated; }
+.map-card-info { width: 100%; margin-top: 10px; text-align: center; }
+.map-card-name { font-size: 15px; font-weight: bold; color: #dde; }
+.map-card-diff { font-size: 13px; margin: 4px 0; letter-spacing: 2px; }
+.map-card-desc { font-size: 11px; color: #889; line-height: 1.4; }
+.map-card-btn { margin-top: 10px; padding: 6px 24px; font-size: 12px; border: none; border-radius: 4px; background: rgba(100,200,255,0.15); color: #8cf; cursor: pointer; transition: all 0.15s; }
+.map-card-btn:hover { background: rgba(100,200,255,0.25); }
+.map-back-btn { padding: 8px 32px; font-size: 13px; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; background: rgba(255,255,255,0.04); color: #aab; cursor: pointer; transition: all 0.15s; }
+.map-back-btn:hover { background: rgba(255,255,255,0.08); color: #dde; }
+
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

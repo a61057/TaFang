@@ -190,12 +190,13 @@ export class GameEngine extends EventEmitter {
     this._talentPanel = panel;
   }
 
-  startChallenge(challengeId, modifiers, totalWaves) {
+  startChallenge(challengeId, modifiers, totalWaves, mapId) {
     this.gameMode = 'challenge';
     this.challengeModifiers = modifiers || {};
     this.victoryShown = false;
     this._activeChallengeId = challengeId;
     document.getElementById('gameContainer').style.display = '';
+    this.map.reload(mapId || 'classic');
     this.waveManager.totalWaves = totalWaves || 15;
     this.waveManager.isInfinite = false;
     this.start();
@@ -206,10 +207,11 @@ export class GameEngine extends EventEmitter {
     this.inventory.add('gold_coin', 2);
   }
 
-  startGame(mode) {
+  startGame(mode, mapId) {
     this.gameMode = mode;
     this.victoryShown = false;
     document.getElementById('gameContainer').style.display = '';
+    this.map.reload(mapId || 'classic');
     if (mode === 'endless') {
       this.waveManager.totalWaves = Infinity;
       this.waveManager.isInfinite = true;

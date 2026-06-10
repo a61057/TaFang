@@ -683,4 +683,17 @@ export const zh = {
   'challenge.swarm.desc': '3倍敌人数，体型减少',
   'challenge.one_hero.name': '孤胆英雄',
   'challenge.one_hero.desc': '无炮塔，仅英雄作战',
+
+  // Maps
+  'map.select': '选择地图',
+  'map.back': '返回',
+  'map.selectMap': '选择',
+  'map.classic.name': '经典',
+  'map.classic.desc': '标准的曲折路径，均衡的布局，适合所有模式',
+  'map.canyon.name': '峡谷',
+  'map.canyon.desc': '长蛇形路径穿越大峡谷，可建造区域极少，挑战性极高',
+  'map.ring.name': '环形',
+  'map.ring.desc': '环形路径环绕中心区域，适合范围伤害炮塔',
+  'map.frozen.name': '冰湖',
+  'map.frozen.desc': '笔直路径穿过冰封湖面，两侧沼泽无法建造，需集中火力',
 };
