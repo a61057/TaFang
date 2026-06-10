@@ -19,16 +19,23 @@
 
 - **Canvas 2D** 纯前端渲染（960×720，24×18网格）
 - **ES Modules** 组织代码
-- **Electron** 桌面打包（v28.3.3）
+- **Tauri v2** 桌面打包（Rust 后端）
 - **对象池** 管理敌人/子弹/粒子
 
 ## 快速开始
 
 ```bash
+# 安装依赖
 npm install
+
+# 开发模式（浏览器）
 npm run serve    # 开发服务器 → http://localhost:3000
-npm start        # Electron 桌面运行
-npm run pack     # 打包为 Windows 应用
+
+# 开发模式（Tauri 桌面应用，需要 Rust 工具链）
+npm run dev      # Tauri 开发模式
+
+# 生产构建（Windows NSIS 安装包）
+npm run build    # Tauri 生产构建
 ```
 
 ## 目录结构

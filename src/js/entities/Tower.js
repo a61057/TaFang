@@ -42,7 +42,26 @@ export class Tower {
     this.hp = this.maxHp;
     this._rangeMult = 1;
     this._fireRateMult = 1;
+    this._buffFireRateMult = 1;
+    this._buffRangeMult = 1;
+    this._buffDamageMult = 1;
     this._factionBonus = {};
+    this._synergies = [];
+    this._synergyDamageMult = 1;
+    this._synergyRangeMult = 1;
+    this._synergyFireRateMult = 1;
+    this._synergySplashMult = 1;
+    this._synergyBurnDamageMult = 1;
+    this._synergyPoisonDamageMult = 1;
+    this._synergyChainBonus = 0;
+    this._hitChanceMult = 1;
+    this._phoenixActive = false;
+    this._phoenixTimer = 0;
+    this._overcharged = false;
+    this._overchargeTimer = 0;
+    this._evolutionBranch = undefined;
+    this._evolutionId = undefined;
+    this._evolutionName = undefined;
     this.stunned = false;
     return this;
   }
@@ -53,7 +72,34 @@ export class Tower {
   }
 
   canUpgrade() {
-    return this.level < MAX_TOWER_LEVEL - 1;
+    return this.level < MAX_TOWER_LEVEL - 2;
+  }
+
+  canEvolve() {
+    return this.level >= MAX_TOWER_LEVEL - 2 && this._evolutionBranch === undefined;
+  }
+
+  getEvolveCost(branch) {
+    const type = TOWER_TYPES[this.typeId];
+    if (!type || !type.evolutions || !type.evolutions[branch]) return -1;
+    return type.evolutions[branch].stats.cost;
+  }
+
+  evolve(branch) {
+    if (!this.canEvolve()) return false;
+    const type = TOWER_TYPES[this.typeId];
+    if (!type || !type.evolutions || !type.evolutions[branch]) return false;
+    this._evolutionBranch = branch;
+    this._evolutionId = type.evolutions[branch].name;
+    this._evolutionName = type.evolutions[branch].name;
+    this.level = 3;
+    this.stats = getTowerStats(this.typeId, this.level, branch);
+    this._applyParts();
+    this.maxHp = 300 + this.level * 300;
+    this.hp = this.maxHp;
+    this.cooldown = 0;
+    this.buildFlash = 1;
+    return true;
   }
 
   _applyParts() {
@@ -71,6 +117,7 @@ export class Tower {
   }
 
   getUpgradeCost() {
+    if (this.canEvolve()) return -1;
     if (!this.canUpgrade()) return -1;
     const nextStats = getTowerStats(this.typeId, this.level + 1);
     return nextStats ? nextStats.cost : -1;
@@ -88,12 +135,21 @@ export class Tower {
     return true;
   }
 
+  getEvolveBranchName(branch) {
+    const type = TOWER_TYPES[this.typeId];
+    if (!type || !type.evolutions || !type.evolutions[branch]) return null;
+    return type.evolutions[branch].name;
+  }
+
   takeDamage(amount) {
     if (!this.alive) return 0;
     this.hp -= amount;
     if (this.hp <= 0) {
       this.hp = 0;
       this.alive = false;
+      if (this._phoenixActive) {
+        this._phoenixTimer = 5;
+      }
     }
     return amount;
   }
@@ -119,7 +175,7 @@ export class Tower {
 
   findTarget(enemies, customRange) {
     if (!this.stats) return null;
-    const range = customRange || (this.stats.range + (this._rangeBuff || 0)) * (this._rangeMult || 1);
+    const range = customRange || (this.stats.range + (this._rangeBuff || 0)) * (this._rangeMult || 1) * (this._synergyRangeMult || 1);
     let best = null;
     let bestProgress = -1;
     let bestHp = Infinity;
@@ -144,7 +200,7 @@ export class Tower {
 
   update(dt) {
     if (!this.alive) return;
-    const rateMult = (this._fireRateMult || 1) * ((this._factionBonus && this._factionBonus.fireRateMult) || 1);
+    const rateMult = (this._fireRateMult || 1) * (this._buffFireRateMult || 1) * (this._synergyFireRateMult || 1) * ((this._factionBonus && this._factionBonus.fireRateMult) || 1);
     this.cooldown = Math.max(0, this.cooldown - dt * rateMult);
     this.buildFlash = Math.max(0, this.buildFlash - dt * 2);
 
@@ -166,18 +222,21 @@ export class Tower {
   fire() {
     if (!this.stats) return null;
     this.cooldown = this.stats.fireRate;
+    const dmgMult = (this._buffDamageMult || 1) * (this._synergyDamageMult || 1);
+    const splashDmg = (this.stats.splash || 0) * (this._synergySplashMult || 1);
     return {
       tower: this,
-      damage: this.stats.damage,
-      splash: this.stats.splash || 0,
-      chainCount: this.stats.chainCount || 0,
+      hitChance: this._hitChanceMult || 1,
+      damage: Math.round(this.stats.damage * dmgMult),
+      splash: splashDmg,
+      chainCount: (this.stats.chainCount || 0) + (this._synergyChainBonus || 0),
       chainRange: this.stats.chainRange || 0,
       effect: this.stats.effect || null,
       slowAmount: this.stats.slowAmount || 0,
       slowDuration: this.stats.slowDuration || 0,
-      burnDamage: this.stats.burnDamage || 5,
+      burnDamage: Math.round((this.stats.burnDamage || 5) * (this._synergyBurnDamageMult || 1)),
       burnDuration: this.stats.burnDuration || 3000,
-      poisonDamage: this.stats.poisonDamage || 0,
+      poisonDamage: Math.round((this.stats.poisonDamage || 0) * (this._synergyPoisonDamageMult || 1)),
       poisonDuration: this.stats.poisonDuration || 0
     };
   }
@@ -588,12 +647,10 @@ export class Tower {
         break;
       }
       case 'ARC': {
-        // Base
         ctx.fillStyle = '#2a4a44';
         ctx.fillRect(x - 5, y - 20 * lvlScale, 10, 24 * lvlScale);
         ctx.fillStyle = '#3a6a5a';
         ctx.fillRect(x - 3, y - 18 * lvlScale, 6, 20 * lvlScale);
-        // Coils
         ctx.strokeStyle = '#44aa88';
         ctx.lineWidth = 2;
         for (let i = 0; i < 3; i++) {
@@ -602,7 +659,6 @@ export class Tower {
           ctx.ellipse(x, cy, 10, 3, 0, 0, Math.PI * 2);
           ctx.stroke();
         }
-        // Arc emitter
         ctx.fillStyle = '#44ffcc';
         ctx.shadowColor = '#44ffcc';
         ctx.shadowBlur = 14;
@@ -610,20 +666,236 @@ export class Tower {
         ctx.arc(x, y - 22 * lvlScale, 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-        // Pulsing rings
-        const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
-        ctx.strokeStyle = `rgba(68,255,204,${pulse * 0.3})`;
+        const pulseA = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+        ctx.strokeStyle = `rgba(68,255,204,${pulseA * 0.3})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(x, y - 22 * lvlScale, 10 + pulse * 4, 0, Math.PI * 2);
+        ctx.arc(x, y - 22 * lvlScale, 10 + pulseA * 4, 0, Math.PI * 2);
         ctx.stroke();
-        // Base plate
         ctx.fillStyle = '#2a4a44';
         ctx.fillRect(x - 14, y + 4, 28, 5);
         ctx.fillStyle = '#3a5a54';
         ctx.fillRect(x - 12, y + 2, 24, 4);
         break;
       }
+      case 'LASER': {
+        ctx.fillStyle = '#3a2a3a';
+        ctx.fillRect(x - 12, y - 2, 24, 12);
+        ctx.fillStyle = '#5a3a5a';
+        ctx.fillRect(x - 10, y - 4, 20, 10);
+        ctx.save();
+        ctx.translate(x, y - 4);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = '#ff3366';
+        ctx.shadowColor = '#ff3366';
+        ctx.shadowBlur = 8;
+        ctx.fillRect(0, -1, 30, 2);
+        ctx.fillStyle = '#ff88aa';
+        ctx.fillRect(28, -2, 8, 4);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+        ctx.fillStyle = '#2a2a3a';
+        ctx.fillRect(x - 14, y + 6, 28, 5);
+        break;
+      }
+      case 'SHOCKWAVE': {
+        ctx.fillStyle = '#5a4a2a';
+        ctx.beginPath();
+        ctx.arc(x, y + 4, 16 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#8a6a3a';
+        ctx.beginPath();
+        ctx.arc(x, y + 2, 14 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        const rings = 3;
+        ctx.strokeStyle = '#ffaa00';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < rings; i++) {
+          const rOff = Math.sin(Date.now() / 200 + i * 2.1) * 3;
+          ctx.globalAlpha = 0.3 + 0.3 * (1 - i / rings);
+          ctx.beginPath();
+          ctx.arc(x, y, 18 + i * 6 + rOff, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#5a4a2a';
+        ctx.fillRect(x - 16, y + 8, 32, 6);
+        break;
+      }
+      case 'TESLA': {
+        ctx.fillStyle = '#3a2a5a';
+        ctx.fillRect(x - 6, y - 28 * lvlScale, 12, 32 * lvlScale);
+        ctx.fillStyle = '#5a3a8a';
+        ctx.fillRect(x - 4, y - 26 * lvlScale, 8, 28 * lvlScale);
+        ctx.strokeStyle = '#8844ff';
+        ctx.lineWidth = 2.5;
+        for (let i = 0; i < 4; i++) {
+          const cy = y - 22 * lvlScale + i * 8;
+          ctx.beginPath();
+          ctx.ellipse(x, cy, 11, 3.5, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#aa66ff';
+        ctx.shadowColor = '#aa66ff';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.arc(x, y - 30 * lvlScale, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#3a2a5a';
+        ctx.fillRect(x - 14, y + 4, 28, 6);
+        break;
+      }
+      case 'SUPPORT': {
+        const crossSize = 14 * lvlScale;
+        ctx.fillStyle = '#2a5a3a';
+        ctx.fillRect(x - crossSize, y - 3, crossSize * 2, 6);
+        ctx.fillRect(x - 3, y - crossSize, 6, crossSize * 2);
+        ctx.fillStyle = '#44dd88';
+        ctx.shadowColor = '#44dd88';
+        ctx.shadowBlur = 6;
+        ctx.fillRect(x - crossSize + 2, y - 1, crossSize * 2 - 4, 2);
+        ctx.fillRect(x - 1, y - crossSize + 2, 2, crossSize * 2 - 4);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#2a5a3a';
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#44dd88';
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(68,221,136,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, 20 + Math.sin(Date.now() / 500) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      }
+      case 'NUKE': {
+        ctx.fillStyle = '#4a2a2a';
+        ctx.beginPath();
+        ctx.arc(x, y + 6, 18 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#6a3a3a';
+        ctx.beginPath();
+        ctx.arc(x, y + 4, 16 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ff2200';
+        ctx.shadowColor = '#ff2200';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x, y - 8, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#8a4a3a';
+        ctx.save();
+        ctx.translate(x, y - 8);
+        ctx.rotate(this.angle);
+        ctx.fillRect(-2, -16, 4, 18);
+        ctx.fillStyle = '#aa5a4a';
+        ctx.fillRect(-1, -18, 2, 4);
+        ctx.restore();
+        ctx.fillStyle = '#4a2a2a';
+        ctx.fillRect(x - 18, y + 10, 36, 6);
+        break;
+      }
+      case 'PHANTOM': {
+        const ghostPulse = Math.sin(Date.now() / 400) * 0.15 + 0.85;
+        ctx.fillStyle = '#4a3a5a';
+        ctx.beginPath();
+        ctx.arc(x - 2, y + 4, 14 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#6a4a8a';
+        ctx.globalAlpha = ghostPulse;
+        ctx.beginPath();
+        ctx.arc(x, y + 2, 12 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#8866aa';
+        ctx.shadowColor = '#8866aa';
+        ctx.shadowBlur = 12 * ghostPulse;
+        ctx.beginPath();
+        ctx.arc(x + 4, y - 6, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = `rgba(136,102,170,${0.2 * ghostPulse})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#4a3a5a';
+        ctx.fillRect(x - 14, y + 8, 28, 5);
+        break;
+      }
+      case 'PLASMA': {
+        ctx.fillStyle = '#2a4a5a';
+        ctx.fillRect(x - 10, y - 4, 20, 14);
+        ctx.fillStyle = '#3a6a8a';
+        ctx.fillRect(x - 8, y - 6, 16, 12);
+        ctx.save();
+        ctx.translate(x, y - 6);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = '#44ddff';
+        ctx.shadowColor = '#44ddff';
+        ctx.shadowBlur = 12;
+        ctx.fillRect(0, -2, 28, 4);
+        ctx.fillStyle = '#88eeff';
+        ctx.fillRect(26, -4, 8, 8);
+        ctx.shadowBlur = 0;
+        const chargeT = this.cooldown / (this.stats ? this.stats.fireRate : 1);
+        if (chargeT < 0.5) {
+          ctx.fillStyle = '#44ddff';
+          ctx.globalAlpha = 0.3 * (1 - chargeT * 2);
+          ctx.beginPath();
+          ctx.arc(30, 0, 6 + (1 - chargeT * 2) * 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+        ctx.fillStyle = '#2a4a5a';
+        ctx.fillRect(x - 14, y + 8, 28, 5);
+        break;
+      }
+      case 'NECROMANCER': {
+        ctx.fillStyle = '#3a2a4a';
+        ctx.beginPath();
+        ctx.arc(x, y + 4, 14 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#5a3a6a';
+        ctx.beginPath();
+        ctx.arc(x, y + 2, 12 * lvlScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#aa88cc';
+        ctx.shadowColor = '#aa88cc';
+        ctx.shadowBlur = 10;
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💀', x, y - 4);
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(170,136,204,0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 18 + Math.sin(Date.now() / 600) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#3a2a4a';
+        ctx.fillRect(x - 14, y + 8, 28, 6);
+        break;
+      }
+    }
+
+    // Evolution (Lv3) glow effect
+    if (this.level >= 3 && this._evolutionBranch !== undefined) {
+      const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 15 * pulse;
+      ctx.strokeStyle = `rgba(255,170,0,${0.3 * pulse})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
     }
 
     ctx.globalAlpha = 1;

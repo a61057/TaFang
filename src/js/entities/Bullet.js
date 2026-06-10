@@ -104,6 +104,22 @@ export class Bullet {
   hit() {
     this.alive = false;
 
+    // Sandstorm: miss chance
+    if (this.hitChance && this.hitChance < 1 && Math.random() > this.hitChance) {
+      if (this.splash > 0) {
+        const enemies = this.tower && this.tower._enemies ? this.tower._enemies : [];
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const dx = enemy.x - this.x;
+          const dy = enemy.y - this.y;
+          if (Math.sqrt(dx * dx + dy * dy) <= this.splash) {
+            this._applyDamage(enemy);
+          }
+        }
+      }
+      return;
+    }
+
     // Find actual enemy at target position
     let hitEnemy = this.target;
     if (hitEnemy && hitEnemy.alive) {
@@ -130,11 +146,21 @@ export class Bullet {
   }
 
   _applyDamage(enemy) {
-    const dmg = enemy.takeDamage(this.damage, true);
+    let voidDmg = 0;
+    if (this.tower && this.tower.buffs) {
+      for (const b of this.tower.buffs) {
+        if (b.effects.voidDamagePct) {
+          voidDmg += Math.floor(enemy.maxHp * b.effects.voidDamagePct);
+        }
+      }
+    }
+    const totalDmg = this.damage + voidDmg;
+    const dmg = enemy.takeDamage(totalDmg, true, this.tower);
     if (this.tower) {
       this.tower.totalDamage += dmg;
       if (!enemy.alive) {
         this.tower.totalKills++;
+        enemy._killerTower = this.tower;
       }
     }
 
@@ -146,6 +172,13 @@ export class Bullet {
     }
     if (this.effect === 'poison' && enemy.alive) {
       enemy.addStatusEffect('poison', this.poisonDamage || 15, this.poisonDuration || 4000);
+    }
+
+    // 精灵阵营·缠绕效果
+    if (enemy.alive && this.tower && this.tower._factionBonus && this.tower._factionBonus.entangleChance) {
+      if (Math.random() < this.tower._factionBonus.entangleChance) {
+        enemy.addStatusEffect('entangle', 1, 1500);
+      }
     }
   }
 
@@ -166,7 +199,7 @@ export class Bullet {
       }
     }
     if (best) {
-      const dmg = best.takeDamage(this.damage * 0.7, true);
+      const dmg = best.takeDamage(this.damage * 0.7, true, this.tower);
       if (this.tower) this.tower.totalDamage += dmg;
       this._doChain(best, depth + 1);
     }

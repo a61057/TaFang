@@ -1,6 +1,7 @@
 import { t, getLanguage } from '../config/locale.js';
 import { SPEAKER_NAMES } from '../config/storyData.js';
 import { iconHTML } from './IconProvider.js';
+import { getPortraitDataUrl } from './CharacterPortraits.js';
 
 export class DialogueBox {
   constructor() {
@@ -80,12 +81,18 @@ export class DialogueBox {
 
     this._speakerName.textContent = speakerName;
 
-    if (d.side === 'ally') {
-      this._speakerIcon.style.background = '#4a90d9';
-      this._speakerIcon.innerHTML = iconHTML('shield');
+    const portraitUrl = getPortraitDataUrl(d.speaker);
+    if (portraitUrl) {
+      this._speakerIcon.style.background = '#1a1a2e';
+      this._speakerIcon.style.backgroundImage = `url(${portraitUrl})`;
+      this._speakerIcon.style.backgroundSize = 'cover';
+      this._speakerIcon.style.backgroundPosition = 'center';
+      this._speakerIcon.innerHTML = '';
     } else {
-      this._speakerIcon.style.background = '#e74c3c';
-      this._speakerIcon.innerHTML = iconHTML('sword');
+      const sideColor = d.side === 'ally' ? '#4a90d9' : '#e74c3c';
+      this._speakerIcon.style.background = sideColor;
+      this._speakerIcon.style.backgroundImage = 'none';
+      this._speakerIcon.innerHTML = iconHTML(d.side === 'ally' ? 'shield' : 'sword');
     }
 
     this._textEl.innerHTML = t(d.textKey);

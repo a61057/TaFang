@@ -31,6 +31,13 @@ export class Hero {
     this._trackW = 4;
     this._template = HERO_TEMPLATES.scout;
     this.equippedWeapons = [];
+    this.heroIndex = 0;
+    this._fortifyActive = false;
+    this._adrenalineActive = false;
+    this._piercingActive = false;
+    this._piercedEnemies = null;
+    this._regenAuraActive = false;
+    this._fireShieldActive = false;
   }
 
   init(map, template) {
@@ -110,6 +117,12 @@ export class Hero {
   }
 
   takeDamage(amount) {
+    if (this._fortifyActive) {
+      amount = Math.floor(amount * 0.5);
+    }
+    if (this._fireShieldActive && this.currentTarget && this.currentTarget.alive) {
+      this.currentTarget.takeDamage(20, true);
+    }
     this.hp -= amount;
     if (this.hp <= 0) {
       this.hp = 0;
@@ -154,8 +167,9 @@ export class Hero {
       const normDx = kbDx / len;
       const normDy = kbDy / len;
       this.angle = Math.atan2(normDy, normDx);
-      this.vx = normDx * this.speed;
-      this.vy = normDy * this.speed;
+      const spdMult = this._adrenalineActive ? 1.5 : 1;
+      this.vx = normDx * this.speed * spdMult;
+      this.vy = normDy * this.speed * spdMult;
       this.x += this.vx * dt;
       this.y += this.vy * dt;
 
@@ -193,10 +207,15 @@ export class Hero {
       } else {
         if (this.cooldown <= 0) {
           const mult = this._atkMult || 1;
-          target.takeDamage(Math.floor(this.attack * mult), true);
-          this.cooldown = this.attackSpeed;
+          const dmg = Math.floor(this.attack * mult);
+          target.takeDamage(dmg, true);
+          if (this._piercingActive && this._piercedEnemies) {
+            this._piercedEnemies.add(target);
+            this._pierceChain(target, dmg, enemies);
+          }
+          this.cooldown = this._adrenalineActive ? this.attackSpeed * 0.5 : this.attackSpeed;
           this._moveTarget = null;
-          return { hit: true, target: target, damage: Math.floor(this.attack * mult) };
+          return { hit: true, target: target, damage: dmg };
         }
       }
     } else if (this._moveTarget) {
@@ -212,11 +231,31 @@ export class Hero {
       }
     }
 
-    this.vx = moveX * this.speed;
-    this.vy = moveY * this.speed;
+    const speedMult = this._adrenalineActive ? 1.5 : 1;
+    this.vx = moveX * this.speed * speedMult;
+    this.vy = moveY * this.speed * speedMult;
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+  }
+
+  _pierceChain(source, dmg, enemies) {
+    let prev = source;
+    for (let i = 0; i < 3; i++) {
+      let closest = null;
+      let closestDist = 120;
+      for (const e of enemies) {
+        if (!e.alive || e === prev || this._piercedEnemies.has(e)) continue;
+        const dx = e.x - prev.x;
+        const dy = e.y - prev.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < closestDist) { closestDist = dist; closest = e; }
+      }
+      if (!closest) break;
+      closest.takeDamage(Math.floor(dmg * 0.5), true);
+      this._piercedEnemies.add(closest);
+      prev = closest;
+    }
   }
 
   render(ctx, offsetX = 0, offsetY = 0) {

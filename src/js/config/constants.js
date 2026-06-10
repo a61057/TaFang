@@ -45,7 +45,7 @@ export const BOSS_INTERVAL = 5;
 export const GAME_SPEEDS = [1, 2, 4];
 
 // Tower limits
-export const MAX_TOWER_LEVEL = 3;
+export const MAX_TOWER_LEVEL = 4;
 
 // Enemy movement
 export const ENEMY_PATH_INTERPOLATION = 'linear';

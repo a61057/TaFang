@@ -3,6 +3,8 @@ import { BuildMenu } from './BuildMenu.js';
 import { TowerInfoPanel } from './TowerInfoPanel.js';
 import { FlowerPopup } from './FlowerPopup.js';
 import { GameOverScreen } from './GameOverScreen.js';
+import { InventoryPanel } from './InventoryPanel.js';
+import { StatsPanel } from './StatsPanel.js';
 import { t } from '../config/locale.js';
 import { iconHTML, iconElem, replaceEmoji } from './IconProvider.js';
 
@@ -14,6 +16,8 @@ export class UIManager {
     this.towerInfo = new TowerInfoPanel(gameEngine);
     this.flowerPopup = new FlowerPopup(gameEngine);
     this.gameOver = new GameOverScreen(gameEngine);
+    this.inventoryPanel = new InventoryPanel(gameEngine);
+    this.statsPanel = new StatsPanel(gameEngine);
     this.hoveredTile = null;
     this.hoveredTower = null;
     this.hoveredEnemy = null;
@@ -85,7 +89,7 @@ export class UIManager {
           });
         }
       }
-    });
+    }).catch(e => console.warn('Failed to list saves:', e));
   }
 
   hideSaveLoad() {

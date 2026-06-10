@@ -22,8 +22,11 @@ import { ACHIEVEMENTS } from '../config/achievements.js';
 import { COLS, ROWS, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, STARTING_GOLD, STARTING_LIVES, GAME_SPEEDS, TERRAIN, HERO_REVIVE_COST, WEATHER_TYPES, PREP_TIME } from '../config/constants.js';
 import { MiniGameManager } from '../ui/MiniGameManager.js';
 import { TutorialManager } from '../managers/TutorialManager.js';
+import { InventoryManager } from '../managers/InventoryManager.js';
+import { SkeletonManager } from '../managers/SkeletonManager.js';
+import { SkillManager } from '../managers/SkillManager.js';
 import { t, setLanguage, getLanguage } from '../config/locale.js';
-import { drawIcon } from '../ui/IconProvider.js';
+import { drawIcon, iconHTML } from '../ui/IconProvider.js';
 
 export class GameEngine extends EventEmitter {
   constructor(canvas) {
@@ -37,10 +40,13 @@ export class GameEngine extends EventEmitter {
     this.enemyManager = new EnemyManager(this.map, this);
     this.towerManager = new TowerManager(this.map);
     this.enemyManager.towerManager = this.towerManager;
+    this.towerManager._enemyManager = this.enemyManager;
     this.waveManager = new WaveManager(this.enemyManager, this);
     this.audio = new AudioManager();
     this.saveSystem = new SaveSystem();
     this.particles = new ParticleSystem();
+    this.inventory = new InventoryManager();
+    this._talentPanel = null;
     this.ui = null;
 
     this.gold = STARTING_GOLD;
@@ -51,6 +57,7 @@ export class GameEngine extends EventEmitter {
     this.gameOver = false;
     this.running = false;
     this.gameMode = 'campaign';
+    this.challengeModifiers = {};
     this.unlockedTowers = new Set(['CANNON', 'MACHINE', 'MORTAR', 'SLOW', 'ELECTRIC']);
     this.victoryShown = false;
 
@@ -73,6 +80,12 @@ export class GameEngine extends EventEmitter {
     this._hoveredTile = null;
     this._hoveredBuildType = null;
 
+    this._activeSynergies = [];
+    this._comboKills = 0;
+    this._comboStreakActive = false;
+    this._comboTimer = 0;
+    this._comboNotified = new Set();
+
     // Statistics
     this.stats = {
       totalKills: 0,
@@ -84,7 +97,9 @@ export class GameEngine extends EventEmitter {
       bossesKilled: 0,
       endlessWaves: 0,
       totalDamageDealt: 0,
-      gameTime: 0
+      gameTime: 0,
+      comboKills: 0,
+      maxCombo: 0
     };
 
     this.achievements = this._loadAchievements();
@@ -104,6 +119,8 @@ export class GameEngine extends EventEmitter {
     this.weatherSystem = new WeatherSystem(this);
     this.flowerManager = new FlowerManager(this);
     this.tutorialManager = new TutorialManager(this);
+    this.skeletonManager = new SkeletonManager();
+    this.skillManager = new SkillManager(this);
 
     this._initInput();
     this._initShortcuts();
@@ -138,14 +155,17 @@ export class GameEngine extends EventEmitter {
         const parsed = JSON.parse(data);
         if (parsed.language) setLanguage(parsed.language);
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to load language setting:', e);
+    }
   }
 
   _loadAchievements() {
     try {
       const data = localStorage.getItem('td_achievements');
       return data ? JSON.parse(data) : {};
-    } catch {
+    } catch (e) {
+      console.warn('Failed to load achievements:', e);
       return {};
     }
   }
@@ -153,7 +173,9 @@ export class GameEngine extends EventEmitter {
   _saveAchievements() {
     try {
       localStorage.setItem('td_achievements', JSON.stringify(this.achievements));
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to save achievements:', e);
+    }
   }
 
   start() {
@@ -162,6 +184,26 @@ export class GameEngine extends EventEmitter {
     this.lastFrameTime = performance.now();
     this.audio.startBGM();
     this._gameLoop(this.lastFrameTime);
+  }
+
+  setTalentPanel(panel) {
+    this._talentPanel = panel;
+  }
+
+  startChallenge(challengeId, modifiers, totalWaves) {
+    this.gameMode = 'challenge';
+    this.challengeModifiers = modifiers || {};
+    this.victoryShown = false;
+    this._activeChallengeId = challengeId;
+    document.getElementById('gameContainer').style.display = '';
+    this.waveManager.totalWaves = totalWaves || 15;
+    this.waveManager.isInfinite = false;
+    this.start();
+    this.inventory.add('damage_boost', 3);
+    this.inventory.add('speed_boost', 3);
+    this.inventory.add('range_boost', 2);
+    this.inventory.add('repair_kit', 2);
+    this.inventory.add('gold_coin', 2);
   }
 
   startGame(mode) {
@@ -187,6 +229,13 @@ export class GameEngine extends EventEmitter {
     if (mode === 'tutorial') {
       this.tutorialManager.start();
     }
+    if (mode !== 'tutorial') {
+      this.inventory.add('damage_boost', 3);
+      this.inventory.add('speed_boost', 3);
+      this.inventory.add('range_boost', 2);
+      this.inventory.add('repair_kit', 2);
+      this.inventory.add('gold_coin', 2);
+    }
   }
 
   _gameLoop(timestamp) {
@@ -194,7 +243,8 @@ export class GameEngine extends EventEmitter {
 
     const rawDt = (timestamp - this.lastFrameTime) / 1000;
     this.lastFrameTime = timestamp;
-    const dt = Math.min(rawDt, 0.05) * this.gameSpeed;
+    const speedOverride = this.eventSystem && this.eventSystem.isActive('time_warp') ? 2 : 1;
+    const dt = Math.min(rawDt, 0.05) * this.gameSpeed * speedOverride;
 
     // FPS calculation
     this.frameCount++;
@@ -225,9 +275,15 @@ export class GameEngine extends EventEmitter {
     }
     if (this._cursorMoveCooldown > 0) this._cursorMoveCooldown = Math.max(0, this._cursorMoveCooldown - dt);
 
+    // 挑战模式 modifier
+    const mod = this.challengeModifiers;
+    if (mod.enemySpeedMult) {
+      this.waveManager._speedMult *= mod.enemySpeedMult;
+    }
+
     // 设置事件/天气对敌人的修正
     this.waveManager._hpMult = this.eventSystem.getEnemyHpMultiplier();
-    this.waveManager._speedMult = this.eventSystem.getEnemySpeedMultiplier() * this.weatherSystem.getEnemySpeedMultiplier();
+    this.waveManager._speedMult *= this.eventSystem.getEnemySpeedMultiplier() * this.weatherSystem.getEnemySpeedMultiplier();
 
     this.waveManager.update(dt);
 
@@ -246,12 +302,22 @@ export class GameEngine extends EventEmitter {
     this.weatherSystem.update(dt, this.towerManager.getTowers(), aliveEnemies);
 
     // 塔攻击 - 传入 faction 和环境修正
-    const rangeMult = this.weatherSystem.getTowerRangeMultiplier();
+    const rangeMult = this.weatherSystem.getTowerRangeMultiplier() * this.eventSystem.getTowerRangeMultiplier();
     const fireRateMult = this.weatherSystem.getTowerFireRateMultiplier();
+    const hitChance = this.eventSystem.getTowerHitChanceMultiplier();
+    for (const tower of this.towerManager.getTowers()) {
+      tower._buffDamageMult = this.getTowerStatMult(tower, 'damageMult');
+      tower._buffRangeMult = this.getTowerStatMult(tower, 'rangeMult');
+      tower._buffFireRateMult = this.getTowerStatMult(tower, 'fireRateMult');
+      tower._hitChanceMult = hitChance;
+    }
     this.towerManager.update(dt, aliveEnemies, rangeMult, fireRateMult);
+    this._updateTowerBuffs(dt);
 
-    // 英雄更新（含天气修正）
-    const heroAtkMult = this.weatherSystem.getHeroAttackMultiplier();
+    // 英雄更新（含天气修正 + 事件修正）
+    const heroAtkMult = this.weatherSystem.getHeroAttackMultiplier() * this.eventSystem.getHeroAttackMultiplier();
+    const heroRegen = this.eventSystem.getHeroRegenMultiplier();
+    const heroSpeedMult = this.eventSystem.getHeroSpeedMultiplier();
     let kbDx = 0, kbDy = 0;
     if (this._keys.left) kbDx = -1;
     if (this._keys.right) kbDx = 1;
@@ -261,6 +327,10 @@ export class GameEngine extends EventEmitter {
     for (const hero of this.heroes) {
       if (!hero.alive) continue;
       hero._atkMult = heroAtkMult;
+      hero._speedMult = heroSpeedMult;
+      if (heroRegen > 0) {
+        hero.hp = Math.min(hero.maxHp, hero.hp + heroRegen * dt);
+      }
       const isPlayer = hero === this.hero;
       const result = hero.update(dt, aliveEnemies, this.map, isPlayer ? kbDx : 0, isPlayer ? kbDy : 0);
       if (isPlayer) {
@@ -277,9 +347,16 @@ export class GameEngine extends EventEmitter {
     // 阵营系统
     this.factionSystem.update(this.towerManager.getTowers());
 
+    // 亡灵召唤骷髅更新
+    this.skeletonManager.update(dt, aliveEnemies, this.map);
+
+    // 塔羁绊
+    this._activeSynergies = this.towerManager.activeSynergies;
+
     this.particles.update(dt);
     this.flowerManager.update(dt);
     if (this.gameMode === 'tutorial') this.tutorialManager.update();
+    this.skillManager.update(dt);
 
     // 英雄碰撞检测（撞人 & 受伤）
     this._heroCollisionCooldown = Math.max(0, this._heroCollisionCooldown - dt);
@@ -324,12 +401,21 @@ export class GameEngine extends EventEmitter {
       }
     }
 
+    this._updateCombo(dt);
+
     // 检查敌人状态
     let killedThisFrame = 0;
     for (const enemy of enemiesBeforeUpdate) {
       if (enemy._leaked) {
         enemy._leaked = false;
         this.lives -= Math.max(1, enemy._isBoss ? 5 : 1);
+        // Leech: steal gold
+        if (enemy.type === 'leech' && enemy.goldSteal) {
+          this.gold = Math.max(0, this.gold - enemy.goldSteal);
+        }
+        this._comboKills = 0;
+        this._comboStreakActive = false;
+        this._comboNotified.clear();
         this.waveManager.perfectWave = false;
         this.audio.playLoseLife();
         if (this.lives <= 0) {
@@ -341,13 +427,25 @@ export class GameEngine extends EventEmitter {
       if (enemy._killed) {
         enemy._killed = false;
         this.stats.totalKills++;
+        this._comboKills++;
+        this._comboStreakActive = true;
+        this._comboTimer = 3;
+        if (this._comboKills > this.stats.comboKills) this.stats.comboKills = this._comboKills;
+        if (this._comboKills > this.stats.maxCombo) this.stats.maxCombo = this._comboKills;
         killedThisFrame++;
+        this._checkComboThreshold();
         const bountyMult = this.eventSystem.getGoldMultiplier();
         const reward = Math.floor(enemy.bounty * bountyMult);
         this.stats.totalGoldEarned += reward;
         this.gold += reward;
         this.audio.playEnemyDeath();
         if (enemy._isBoss) this.stats.bossesKilled++;
+
+        // 亡灵阵营·召唤骷髅
+        if (enemy._killerTower && !enemy.isFlying) {
+          const waveScale = 1 + this.waveManager.currentWave * 0.1;
+          this.skeletonManager.trySpawn(enemy._killerTower, enemy, this.map, waveScale);
+        }
 
         // 英雄获得经验 - 击杀者+15，其他英雄+10
         for (const h of this.heroes) {
@@ -478,11 +576,57 @@ export class GameEngine extends EventEmitter {
     // Draw bullets
     this.towerManager.renderBullets(ctx, this.offsetX, this.offsetY);
 
+    // Draw skeletons
+    for (const sk of this.skeletonManager.getAlive()) {
+      sk.render(ctx, this.offsetX, this.offsetY);
+    }
+
+    // Draw skill zones (napalm, void rifts)
+    for (const z of this.skillManager.getNapalmZones()) {
+      const pct = z.life / z.duration;
+      ctx.fillStyle = `rgba(255,68,0,${0.15 * pct})`;
+      ctx.beginPath();
+      ctx.arc(z.x + this.offsetX, z.y + this.offsetY, z.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,68,0,${0.3 * pct})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    for (const r of this.skillManager.getVoidRifts()) {
+      const pct = r.life / r.duration;
+      ctx.fillStyle = `rgba(170,68,255,${0.12 * pct})`;
+      ctx.beginPath();
+      ctx.arc(r.x + this.offsetX, r.y + this.offsetY, r.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(170,68,255,${0.3 * pct})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // Deployed turrets
+    for (const t of this.skillManager.getDeployedTurrets()) {
+      if (t.alive) t.render(ctx, this.offsetX, this.offsetY);
+    }
+
     // Draw particles
     this.particles.render(ctx);
 
     // Weather overlay
     this.weatherSystem.renderOverlay(ctx);
+
+    // Event overlays (sandstorm)
+    if (this.eventSystem.isSandstorm()) {
+      ctx.fillStyle = 'rgba(200,160,80,0.08)';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = 'rgba(200,160,80,0.12)';
+      const t = Date.now() / 800;
+      for (let i = 0; i < 30; i++) {
+        const sx = (i * 83 + t * 120) % ctx.canvas.width;
+        const sy = (i * 47 + t * 80 + 200) % ctx.canvas.height;
+        ctx.fillRect(sx, sy, 4, 4);
+      }
+    }
 
     if (this.showDebug) {
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -504,12 +648,17 @@ export class GameEngine extends EventEmitter {
   }
 
   _initInput() {
-    this.canvas.addEventListener('click', (e) => this._handleClick(e));
-    this.canvas.addEventListener('mousemove', (e) => this._handleMouseMove(e));
-    this.canvas.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      this._handleRightClick(e);
-    });
+    this._boundHandlers = {
+      click: (e) => this._handleClick(e),
+      mousemove: (e) => this._handleMouseMove(e),
+      contextmenu: (e) => { e.preventDefault(); this._handleRightClick(e); },
+      keydown: (e) => this._onKeyDown(e),
+      keyup: (e) => this._onKeyUp(e),
+    };
+
+    this.canvas.addEventListener('click', this._boundHandlers.click);
+    this.canvas.addEventListener('mousemove', this._boundHandlers.mousemove);
+    this.canvas.addEventListener('contextmenu', this._boundHandlers.contextmenu);
 
     this._keys = { up: false, down: false, left: false, right: false };
     this._cursorCol = -1;
@@ -518,127 +667,144 @@ export class GameEngine extends EventEmitter {
     this._cursorMoveCooldown = 0;
     this.flowerMode = false;
 
-    document.addEventListener('keydown', (e) => {
-      if (this._miniGameActive) return;
-      if (e.key === 'Escape') {
-        this.ui.buildMenu.hide();
-        this.ui.towerInfo.hide();
-        this.ui.flowerPopup.hide();
-        this.selectedTower = null;
-        this.selectedTile = null;
-        this._cursorActive = false;
-        if (this.flowerMode) {
-          this.flowerMode = false;
-          const btn = document.querySelector('#btnFlowerMode');
-          if (btn) { btn.style.background = ''; btn.style.borderColor = ''; }
-        }
+    document.addEventListener('keydown', this._boundHandlers.keydown);
+    document.addEventListener('keyup', this._boundHandlers.keyup);
+  }
+
+  _onKeyDown(e) {
+    if (this._miniGameActive) return;
+    if (e.key === 'Escape') {
+      if (this.ui && this.ui.inventoryPanel.isVisible()) {
+        this.ui.inventoryPanel.hide();
+        return;
       }
-      if ((e.key === 'p' || e.key === 'P') && !this._miniGameActive) this.togglePause();
-      if (e.key === 'Enter') {
-        e.preventDefault();
+      this.ui.buildMenu.hide();
+      this.ui.towerInfo.hide();
+      this.ui.flowerPopup.hide();
+      this.selectedTower = null;
+      this.selectedTile = null;
+      this._cursorActive = false;
+      if (this.flowerMode) {
+        this.flowerMode = false;
+        const btn = document.querySelector('#btnFlowerMode');
+        if (btn) { btn.style.background = ''; btn.style.borderColor = ''; }
+      }
+    }
+    if ((e.key === 'p' || e.key === 'P') && !this._miniGameActive) this.togglePause();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.startNextWave();
+    }
+    if (e.key === ' ') {
+      e.preventDefault();
+      const didInteract = this._cursorActive && this._cursorCol >= 0 && this._interactAtCursor();
+      if (!didInteract) {
         this.startNextWave();
       }
-      if (e.key === ' ') {
+    }
+    if (e.key === 'F3') {
+      this.showDebug = !this.showDebug;
+    }
+
+    if (e.key === 'd' && !e.ctrlKey && !e.metaKey) {
+      this._cycleBuildType();
+    }
+
+    if ((e.key === 'l' || e.key === 'L') && !e.ctrlKey && !e.metaKey) {
+      this._toggleLanguage();
+    }
+
+    if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (this.gameMode === 'tutorial') this.tutorialManager.end();
+      this.saveGame(0);
+      this.audio.stopBGM();
+      this.running = false;
+      document.getElementById('gameContainer').style.display = 'none';
+      this.mainMenu.show();
+    }
+
+    if ((e.key === 't' || e.key === 'T') && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (this._talentPanel) this._talentPanel.toggle();
+    }
+
+    if ((e.key === 'i' || e.key === 'I') && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (this.ui) this.ui.inventoryPanel.toggle();
+    }
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (this.ui) this.ui.statsPanel.toggle();
+    }
+
+    if (e.key === 'a' || e.key === 'A') this._keyComboA = true;
+    if (e.key === 'b' || e.key === 'B') this._keyComboB = true;
+
+    if (this.testMode) {
+      if (e.key === ']' || e.key === '}') {
+        this._skipToWave(this.waveManager.currentWave + 5);
         e.preventDefault();
-        const didInteract = this._cursorActive && this._cursorCol >= 0 && this._interactAtCursor();
-        if (!didInteract) {
-          this.startNextWave();
-        }
       }
-      if (e.key === 'F3') {
-        this.showDebug = !this.showDebug;
-      }
-
-      // D → 切换建造类型（在 WASD 赋值前判断）
-      if (e.key === 'd' && !e.ctrlKey && !e.metaKey) {
-        this._cycleBuildType();
-      }
-
-      // L 切换语言
-      if ((e.key === 'l' || e.key === 'L') && !e.ctrlKey && !e.metaKey) {
-        this._toggleLanguage();
-      }
-
-      // M 回主菜单并自动存档
-      if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey) {
+      if (e.key === '[' || e.key === '{') {
+        this._skipToWave(Math.max(1, this.waveManager.currentWave - 5));
         e.preventDefault();
-        if (this.gameMode === 'tutorial') this.tutorialManager.end();
-        this.saveGame(0);
-        this.audio.stopBGM();
-        this.running = false;
-        document.getElementById('gameContainer').style.display = 'none';
-        this.mainMenu.show();
       }
-
-      // A+B 测试模式
-      if (e.key === 'a' || e.key === 'A') this._keyComboA = true;
-      if (e.key === 'b' || e.key === 'B') this._keyComboB = true;
-
-      // 测试模式下调节关卡
-      if (this.testMode) {
-        if (e.key === ']' || e.key === '}') {
-          this._skipToWave(this.waveManager.currentWave + 5);
-          e.preventDefault();
-        }
-        if (e.key === '[' || e.key === '{') {
-          this._skipToWave(Math.max(1, this.waveManager.currentWave - 5));
-          e.preventDefault();
-        }
-        if (e.key === 'ArrowRight' && e.shiftKey) {
-          this._skipToWave(this.waveManager.currentWave + 1);
-          e.preventDefault();
-        }
-        if (e.key === 'ArrowLeft' && e.shiftKey) {
-          this._skipToWave(Math.max(1, this.waveManager.currentWave - 1));
-          e.preventDefault();
-        }
+      if (e.key === 'ArrowRight' && e.shiftKey) {
+        this._skipToWave(this.waveManager.currentWave + 1);
+        e.preventDefault();
       }
+      if (e.key === 'ArrowLeft' && e.shiftKey) {
+        this._skipToWave(Math.max(1, this.waveManager.currentWave - 1));
+        e.preventDefault();
+      }
+    }
 
-      // WASD → 坦克移动
+    switch (e.key) {
+      case 'w': case 'W': this._keys.up = true; e.preventDefault(); break;
+      case 's': case 'S': this._keys.down = true; e.preventDefault(); break;
+      case 'a': case 'A': this._keys.left = true; e.preventDefault(); break;
+      case 'd': case 'D': this._keys.right = true; e.preventDefault(); break;
+      case 'q': case 'Q': this._useHeroSkill(0); e.preventDefault(); break;
+      case 'e': case 'E': this._useHeroSkill(1); e.preventDefault(); break;
+    }
+
+    if (this._cursorMoveCooldown <= 0) {
+      let dr = 0, dc = 0;
       switch (e.key) {
-        case 'w': case 'W': this._keys.up = true; e.preventDefault(); break;
-        case 's': case 'S': this._keys.down = true; e.preventDefault(); break;
-        case 'a': case 'A': this._keys.left = true; e.preventDefault(); break;
-        case 'd': case 'D': this._keys.right = true; e.preventDefault(); break;
+        case 'ArrowUp':    dr = -1; break;
+        case 'ArrowDown':  dr = 1; break;
+        case 'ArrowLeft':  dc = -1; break;
+        case 'ArrowRight': dc = 1; break;
       }
-
-      // 方向键 → 网格光标
-      if (this._cursorMoveCooldown <= 0) {
-        let dr = 0, dc = 0;
-        switch (e.key) {
-          case 'ArrowUp':    dr = -1; break;
-          case 'ArrowDown':  dr = 1; break;
-          case 'ArrowLeft':  dc = -1; break;
-          case 'ArrowRight': dc = 1; break;
+      if (dr !== 0 || dc !== 0) {
+        e.preventDefault();
+        if (!this._cursorActive) {
+          this._cursorActive = true;
+          this._cursorCol = Math.floor(COLS / 2);
+          this._cursorRow = Math.floor(ROWS / 2);
         }
-        if (dr !== 0 || dc !== 0) {
-          e.preventDefault();
-          if (!this._cursorActive) {
-            this._cursorActive = true;
-            this._cursorCol = Math.floor(COLS / 2);
-            this._cursorRow = Math.floor(ROWS / 2);
-          }
-          const newCol = Math.max(0, Math.min(COLS - 1, this._cursorCol + dc));
-          const newRow = Math.max(0, Math.min(ROWS - 1, this._cursorRow + dr));
-          if (newCol !== this._cursorCol || newRow !== this._cursorRow) {
-            this._cursorCol = newCol;
-            this._cursorRow = newRow;
-            this._cursorMoveCooldown = 0.12;
-          }
+        const newCol = Math.max(0, Math.min(COLS - 1, this._cursorCol + dc));
+        const newRow = Math.max(0, Math.min(ROWS - 1, this._cursorRow + dr));
+        if (newCol !== this._cursorCol || newRow !== this._cursorRow) {
+          this._cursorCol = newCol;
+          this._cursorRow = newRow;
+          this._cursorMoveCooldown = 0.12;
         }
       }
-    });
+    }
+  }
 
-    document.addEventListener('keyup', (e) => {
-      if (e.key === 'a' || e.key === 'A') this._keyComboA = false;
-      if (e.key === 'b' || e.key === 'B') this._keyComboB = false;
-      switch (e.key) {
-        case 'w': case 'W': this._keys.up = false; break;
-        case 's': case 'S': this._keys.down = false; break;
-        case 'a': case 'A': this._keys.left = false; break;
-        case 'd': case 'D': this._keys.right = false; break;
-      }
-    });
+  _onKeyUp(e) {
+    if (e.key === 'a' || e.key === 'A') this._keyComboA = false;
+    if (e.key === 'b' || e.key === 'B') this._keyComboB = false;
+    switch (e.key) {
+      case 'w': case 'W': this._keys.up = false; break;
+      case 's': case 'S': this._keys.down = false; break;
+      case 'a': case 'A': this._keys.left = false; break;
+      case 'd': case 'D': this._keys.right = false; break;
+    }
   }
 
   _initShortcuts() {
@@ -678,6 +844,11 @@ export class GameEngine extends EventEmitter {
     // Check if clicking on existing tower
     const existingTower = this.towerManager.getTowerAt(col, row);
     if (existingTower) {
+      // 如果物品栏打开且有选中物品，优先使用到炮塔上
+      if (this.ui.inventoryPanel.isVisible() && this.ui.inventoryPanel.getSelectedItem()) {
+        this.ui.inventoryPanel.useOnTower(existingTower);
+        return;
+      }
       this.ui.buildMenu.hide();
       this.ui.flowerPopup.hide();
       this.selectedTower = existingTower;
@@ -728,6 +899,8 @@ export class GameEngine extends EventEmitter {
     const scaleY = this.canvas.height / rect.height;
     const mx = (e.clientX - rect.left) * scaleX - this.offsetX;
     const my = (e.clientY - rect.top) * scaleY - this.offsetY;
+    this._cursorWorldX = mx;
+    this._cursorWorldY = my;
 
     // Hovered tile
     this._hoveredTile = this.map.getTileAtPixel(mx, my);
@@ -741,8 +914,8 @@ export class GameEngine extends EventEmitter {
 
     if (tower && !this.ui.buildMenu.visible && !this.ui.towerInfo.visible) {
       this.ui.showTowerTooltip(tower, e.clientX, e.clientY);
-    } else {
-      // Check hovered enemy
+    } else if (!this.eventSystem.isSandstorm()) {
+      // Check hovered enemy (hidden in sandstorm)
       const enemies = this.enemyManager.getAlive();
       const enemy = enemies.find(en => {
         const dx = mx - en.x;
@@ -754,6 +927,8 @@ export class GameEngine extends EventEmitter {
       } else {
         this.ui.hideTooltip();
       }
+    } else {
+      this.ui.hideTooltip();
     }
   }
 
@@ -821,7 +996,9 @@ export class GameEngine extends EventEmitter {
       const saved = JSON.parse(localStorage.getItem('td_settings') || '{}');
       saved.language = next;
       localStorage.setItem('td_settings', JSON.stringify(saved));
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to save language setting:', e);
+    }
     console.log('[Language]', next === 'en' ? 'English' : '中文');
     if (this.ui) this.ui.refreshLanguage();
   }
@@ -854,12 +1031,19 @@ export class GameEngine extends EventEmitter {
   }
 
   buildTower(col, row, typeId) {
+    if (this.challengeModifiers.blockBuild) return false;
     if (!this.isTowerUnlocked(typeId)) return false;
     const cost = TOWER_TYPES[typeId].levels[0].cost;
     if (this.gold < cost) return false;
 
     const tower = this.towerManager.buildTower(col, row, typeId);
     if (!tower) return false;
+
+    // Challenge modifier: range
+    const rangeMod = this.challengeModifiers.rangeMult;
+    if (rangeMod !== undefined && tower.stats) {
+      tower.stats.range = Math.floor(tower.stats.range * rangeMod);
+    }
 
     this.gold -= cost;
     this.stats.towersBuilt++;
@@ -876,6 +1060,7 @@ export class GameEngine extends EventEmitter {
   }
 
   upgradeTower(tower) {
+    if (this.challengeModifiers.blockUpgrade) return false;
     if (!tower.canUpgrade()) return false;
     const cost = tower.getUpgradeCost();
     if (this.gold < cost) return false;
@@ -891,10 +1076,33 @@ export class GameEngine extends EventEmitter {
       life: 500
     });
 
-    if (tower.level >= 2) {
+    if (tower.level >= 2 && !tower._evolutionBranch !== undefined) {
       this.stats.maxLevelTowers++;
       this._checkAchievements();
     }
+
+    if (this.ui.towerInfo.visible && this.ui.towerInfo.currentTower === tower) {
+      this.ui.towerInfo.show(tower);
+    }
+    return true;
+  }
+
+  evolveTower(tower, branch) {
+    if (!tower.canEvolve()) return false;
+    const cost = tower.getEvolveCost(branch);
+    if (this.gold < cost) return false;
+
+    this.gold -= cost;
+    tower.evolve(branch);
+    this.audio.playUpgrade();
+    this.emit('tower-evolved', tower);
+    this.particles.emit(tower.x, tower.y, 20, {
+      color: '#ffaa00',
+      speed: 120,
+      size: 4,
+      life: 700
+    });
+    this.stats.maxLevelTowers++;
 
     if (this.ui.towerInfo.visible && this.ui.towerInfo.currentTower === tower) {
       this.ui.towerInfo.show(tower);
@@ -911,8 +1119,37 @@ export class GameEngine extends EventEmitter {
   }
 
   addGold(amount) {
-    this.gold += amount;
-    this.stats.totalGoldEarned += amount;
+    const mod = this.challengeModifiers;
+    const mult = mod.goldMult !== undefined ? mod.goldMult : 1;
+    const adjusted = Math.floor(amount * mult);
+    this.gold += adjusted;
+    this.stats.totalGoldEarned += adjusted;
+  }
+
+  _updateTowerBuffs(dt) {
+    for (const tower of this.towerManager.getTowers()) {
+      if (!tower.buffs || tower.buffs.length === 0) continue;
+      for (let i = tower.buffs.length - 1; i >= 0; i--) {
+        tower.buffs[i].remaining -= dt;
+        if (tower.buffs[i].remaining <= 0) {
+          tower.buffs.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  getTowerStatMult(tower, stat) {
+    if (!tower.buffs) return 1;
+    let mult = 1;
+    for (const buff of tower.buffs) {
+      if (buff.effects[stat]) mult *= buff.effects[stat];
+    }
+    return mult;
+  }
+
+  _useHeroSkill(slot) {
+    if (this.paused || this.gameOver || !this.hero.alive) return;
+    this.skillManager.useSkill(this.hero, slot);
   }
 
   showHeroPanel() {
@@ -1054,6 +1291,20 @@ export class GameEngine extends EventEmitter {
       return;
     }
 
+    // 挑战模式通关检测
+    if (this.gameMode === 'challenge' && !this.waveManager.isInfinite && wave >= this.waveManager.totalWaves && !this.victoryShown) {
+      this.victoryShown = true;
+      this.gameOver = true;
+      this.audio.playGameOver();
+      this.ui.gameOver.show('victory');
+      this._autoSave();
+      import('../config/challengeData.js').then(mod => {
+        if (this._activeChallengeId) mod.markChallengeCompleted(this._activeChallengeId);
+      });
+      this.emit('wave-complete', { wave, reward, perfect });
+      return;
+    }
+
     this.emit('wave-complete', { wave, reward, perfect });
     this._autoSave();
   }
@@ -1071,6 +1322,16 @@ export class GameEngine extends EventEmitter {
     if (window.electronAPI) {
       window.electronAPI.showNotification(t('notify.gameOver'), t('notify.gameOverDetail', this.waveManager.currentWave, this.stats.totalKills));
     }
+  }
+
+  _cleanupInput() {
+    if (!this._boundHandlers) return;
+    this.canvas.removeEventListener('click', this._boundHandlers.click);
+    this.canvas.removeEventListener('mousemove', this._boundHandlers.mousemove);
+    this.canvas.removeEventListener('contextmenu', this._boundHandlers.contextmenu);
+    document.removeEventListener('keydown', this._boundHandlers.keydown);
+    document.removeEventListener('keyup', this._boundHandlers.keyup);
+    this._boundHandlers = null;
   }
 
   resetGame() {
@@ -1096,6 +1357,7 @@ export class GameEngine extends EventEmitter {
     this.storyManager = new StoryManager(this);
     this.weatherSystem = new WeatherSystem(this);
     this.flowerManager = new FlowerManager(this);
+    this.skeletonManager = new SkeletonManager();
 
     this.stats = {
       totalKills: 0,
@@ -1107,8 +1369,16 @@ export class GameEngine extends EventEmitter {
       bossesKilled: 0,
       endlessWaves: 0,
       totalDamageDealt: 0,
-      gameTime: 0
+      gameTime: 0,
+      comboKills: 0,
+      maxCombo: 0
     };
+
+    this._activeSynergies = [];
+    this._comboKills = 0;
+    this._comboStreakActive = false;
+    this._comboTimer = 0;
+    this._comboNotified = new Set();
 
     this.selectedTower = null;
     this.selectedTile = null;
@@ -1136,8 +1406,62 @@ export class GameEngine extends EventEmitter {
       goldEarned: this.stats.totalGoldEarned,
       isPaused: this.paused,
       isGameOver: this.gameOver,
-      flowerCount: this.flowerManager.getCount()
+      flowerCount: this.flowerManager.getCount(),
+      comboKills: this._comboKills,
+      comboStreakActive: this._comboStreakActive
     };
+  }
+
+  _updateCombo(dt) {
+    if (!this._comboStreakActive) return;
+    this._comboTimer -= dt;
+    if (this._comboTimer <= 0) {
+      this._comboKills = 0;
+      this._comboStreakActive = false;
+      this._comboNotified.clear();
+    }
+  }
+
+  _checkComboThreshold() {
+    if (this.gameMode === 'tutorial') return;
+    const thresholds = [
+      { kills: 50, labelKey: 'combo.legendary', gold: 100, buff: 'item' },
+      { kills: 20, labelKey: 'combo.amazing', gold: 50, buff: { fireRateMult: 1.2, duration: 5 } },
+      { kills: 10, labelKey: 'combo.great', gold: 25, buff: null },
+      { kills: 5, labelKey: 'combo.nice', gold: 10, buff: null }
+    ];
+    for (const th of thresholds) {
+      if (this._comboKills >= th.kills && !this._comboNotified.has(th.kills)) {
+        this._comboNotified.add(th.kills);
+        this.stats.totalGoldEarned += th.gold;
+        this.gold += th.gold;
+        if (th.buff === 'item') {
+          const items = ['damage_boost', 'speed_boost', 'range_boost', 'gold_coin'];
+          const randItem = items[Math.floor(Math.random() * items.length)];
+          this.inventory.add(randItem, 1);
+        } else if (th.buff && th.buff.fireRateMult) {
+          for (const tower of this.towerManager.getTowers()) {
+            if (!tower.alive) continue;
+            if (!tower.buffs) tower.buffs = [];
+            tower.buffs.push({
+              effects: { fireRateMult: th.buff.fireRateMult },
+              remaining: th.buff.duration
+            });
+          }
+        }
+        const el = document.createElement('div');
+        el.className = 'notification combo-notification';
+        const label = th.labelKey;
+        if (label === 'combo.legendary') {
+          el.style.borderColor = '#ff8800';
+          el.style.color = '#ff8800';
+        }
+        el.innerHTML = `${label} ${this._comboKills}${iconHTML('skull')} +${th.gold}g`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+        break;
+      }
+    }
   }
 
   _checkAchievements() {
@@ -1220,17 +1544,18 @@ export class GameEngine extends EventEmitter {
       },
       heroManager: this.heroManager.toJSON(),
       unlockedTowers: Array.from(this.unlockedTowers),
-      flowers: this.flowerManager.toJSON()
+      flowers: this.flowerManager.toJSON(),
+      inventory: this.inventory.toJSON()
     };
   }
 
   _deserialize(state) {
-    this.gold = state.gold || STARTING_GOLD;
-    this.lives = state.lives || STARTING_LIVES;
+    this.gold = state.gold ?? STARTING_GOLD;
+    this.lives = state.lives ?? STARTING_LIVES;
     this.gameOver = false;
     this.paused = false;
-    this.gameSpeedIndex = state.gameSpeedIndex || 0;
-    this.gameSpeed = GAME_SPEEDS[this.gameSpeedIndex] || 1;
+    this.gameSpeedIndex = state.gameSpeedIndex ?? 0;
+    this.gameSpeed = GAME_SPEEDS[this.gameSpeedIndex] ?? 1;
 
     this.map = GameMap.fromJSON(state.map);
     this.enemyManager.clear();
@@ -1238,11 +1563,12 @@ export class GameEngine extends EventEmitter {
     this.particles.clear();
     this.towerManager = new TowerManager(this.map);
     this.enemyManager.towerManager = this.towerManager;
+    this.towerManager._enemyManager = this.enemyManager;
     this.towerManager.fromJSON(state.towers || []);
     this.waveManager = new WaveManager(this.enemyManager, this);
     this.waveManager.fromJSON(state.wave || {});
-    this.gameMode = state.gameMode || 'campaign';
-    this.unlockedTowers = new Set(state.unlockedTowers || ['CANNON', 'MACHINE', 'MORTAR', 'SLOW', 'ELECTRIC']);
+    this.gameMode = state.gameMode ?? 'campaign';
+    this.unlockedTowers = new Set(state.unlockedTowers ?? ['CANNON', 'MACHINE', 'MORTAR', 'SLOW', 'ELECTRIC']);
     this.victoryShown = false;
 
     if (state.heroManager) {
@@ -1254,11 +1580,11 @@ export class GameEngine extends EventEmitter {
     this.hero.init(this.map, tmpl);
     this.heroManager.applyHeroState(this.hero);
     if (state.hero) {
-      this.hero.x = state.hero.x || this.hero.x;
-      this.hero.y = state.hero.y || this.hero.y;
-      this.hero.hp = state.hero.hp || this.hero.maxHp;
+      this.hero.x = state.hero.x ?? this.hero.x;
+      this.hero.y = state.hero.y ?? this.hero.y;
+      this.hero.hp = state.hero.hp ?? this.hero.maxHp;
       this.hero.alive = state.hero.alive !== false;
-      this.hero.angle = state.hero.angle || 0;
+      this.hero.angle = state.hero.angle ?? 0;
     }
     if (state.additionalHeroes) {
       for (const hData of state.additionalHeroes) {
@@ -1266,9 +1592,9 @@ export class GameEngine extends EventEmitter {
         const h = new Hero();
         h.init(this.map, hTmpl);
         this.heroManager.applyHeroStateById(h, hData.typeId);
-        h.x = hData.x || this.hero.x;
-        h.y = hData.y || this.hero.y;
-        h.hp = hData.hp || h.maxHp;
+        h.x = hData.x ?? this.hero.x;
+        h.y = hData.y ?? this.hero.y;
+        h.hp = hData.hp ?? h.maxHp;
         h.alive = hData.alive !== false;
         this.heroes.push(h);
       }
@@ -1281,6 +1607,10 @@ export class GameEngine extends EventEmitter {
 
     if (state.flowers) {
       this.flowerManager.fromJSON(state.flowers);
+    }
+
+    if (state.inventory) {
+      this.inventory.fromJSON(state.inventory);
     }
 
     if (state.story) {

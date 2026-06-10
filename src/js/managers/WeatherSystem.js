@@ -72,6 +72,7 @@ export class WeatherSystem {
     let mult = 1;
     if (this.currentWeather.id === 'rainy') mult *= 0.9;
     if (this.currentWeather.id === 'blizzard') mult *= 0.8;
+    if (this.currentWeather.id === 'fog') mult *= 0.9;
     if (this.dayNight === DAY_NIGHT_CYCLE.NIGHT) mult *= 1.15;
     return mult;
   }
@@ -79,6 +80,7 @@ export class WeatherSystem {
   getTowerRangeMultiplier() {
     let mult = 1;
     if (this.currentWeather.id === 'rainy') mult *= 0.9;
+    if (this.currentWeather.id === 'fog') mult *= 0.8;
     if (this.dayNight === DAY_NIGHT_CYCLE.NIGHT) mult *= 0.9;
     return mult;
   }

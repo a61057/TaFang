@@ -163,6 +163,13 @@ export class GameMap {
     return this.path.length;
   }
 
+  getPathPixels() {
+    return this.path.map(p => ({
+      x: p.col * this.tileSize + this.tileSize / 2,
+      y: p.row * this.tileSize + this.tileSize / 2
+    }));
+  }
+
   getWorldPos(col, row) {
     return {
       x: col * this.tileSize + this.tileSize / 2,

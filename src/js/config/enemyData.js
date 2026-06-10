@@ -28,17 +28,68 @@ defineEnemy('flying', {
 defineEnemy('boss', {
   id: 'boss', name: 'BOSS', color: '#c0392b',
   baseHp: 1200, baseSpeed: 30, armor: 6, bounty: 150,
-  size: 24, isFlying: false, isBoss: true
+  size: 24, isFlying: false, isBoss: true,
+  bossTalents: []
 });
 defineEnemy('megaboss', {
   id: 'megaboss', name: 'MEGA BOSS', color: '#ff4400',
   baseHp: 4000, baseSpeed: 22, armor: 10, bounty: 600,
-  size: 36, isFlying: false, isBoss: true
+  size: 36, isFlying: false, isBoss: true,
+  bossTalents: ['flameAura', 'rage']
 });
 defineEnemy('bomber', {
   id: 'bomber', name: 'Bomber', color: '#ff6600',
   baseHp: 300, baseSpeed: 45, armor: 2, bounty: 100,
   size: 16, isFlying: true, isBoss: false
+});
+
+// === NEW ENEMIES ===
+defineEnemy('regenerator', {
+  id: 'regenerator', name: 'Regenerator', color: '#2ecc71',
+  baseHp: 140, baseSpeed: 55, armor: 1, bounty: 18,
+  size: 14, isFlying: false, isBoss: false,
+  healRate: 8
+});
+defineEnemy('shielded', {
+  id: 'shielded', name: 'Shielded', color: '#7f8c8d',
+  baseHp: 100, baseSpeed: 50, armor: 0, bounty: 22,
+  size: 15, isFlying: false, isBoss: false,
+  shieldHp: 100, shieldRecharge: 5, shieldCooldown: 8
+});
+defineEnemy('splitter', {
+  id: 'splitter', name: 'Splitter', color: '#9b59b6',
+  baseHp: 160, baseSpeed: 50, armor: 1, bounty: 24,
+  size: 16, isFlying: false, isBoss: false,
+  splitCount: 2
+});
+defineEnemy('stealth', {
+  id: 'stealth', name: 'Stealth', color: '#bdc3c7',
+  baseHp: 60, baseSpeed: 75, armor: 0, bounty: 16,
+  size: 10, isFlying: false, isBoss: false,
+  revealRange: 200
+});
+defineEnemy('leech', {
+  id: 'leech', name: 'Leech', color: '#8b0000',
+  baseHp: 120, baseSpeed: 60, armor: 0, bounty: 30,
+  size: 13, isFlying: false, isBoss: false,
+  goldSteal: 5
+});
+defineEnemy('swarm', {
+  id: 'swarm', name: 'Swarm', color: '#e67e22',
+  baseHp: 30, baseSpeed: 110, armor: 0, bounty: 6,
+  size: 7, isFlying: false, isBoss: false
+});
+defineEnemy('void', {
+  id: 'void', name: 'Void Walker', color: '#8e44ad',
+  baseHp: 100, baseSpeed: 65, armor: 1, bounty: 25,
+  size: 14, isFlying: false, isBoss: false,
+  teleportInterval: 5, teleportRange: 80
+});
+defineEnemy('crystal', {
+  id: 'crystal', name: 'Crystal', color: '#00bcd4',
+  baseHp: 130, baseSpeed: 45, armor: 3, bounty: 20,
+  size: 14, isFlying: false, isBoss: false,
+  reflectPct: 0.15
 });
 
 export function getEnemyStats(typeId, waveNumber) {

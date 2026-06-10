@@ -19,7 +19,6 @@ export class MiniGameManager {
   start(engine, onComplete) {
     this.engine = engine;
     this.onComplete = onComplete;
-    this._saveState();
     this._createOverlay();
     const type = GAME_TYPES[Math.floor(Math.random() * GAME_TYPES.length)];
     this[`_start${type.charAt(0).toUpperCase() + type.slice(1)}`]();
@@ -97,7 +96,6 @@ export class MiniGameManager {
     this.score = score;
     const goldReward = Math.max(10, Math.floor(score));
     this._clearOverlay();
-    this._restoreState();
     if (this.engine) {
       this.engine.addGold(goldReward);
     }
@@ -146,7 +144,6 @@ export class MiniGameManager {
 
     for (let i = 0; i < cols * rows; i++) {
       const hole = this.overlay.querySelector(`.mg-hole[data-idx="${i}"]`);
-      holeEls.push(hole);
       grid.push(false);
       hole.addEventListener('click', () => {
         if (activeMole === i) {

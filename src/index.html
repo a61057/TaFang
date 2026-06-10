@@ -3,24 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A Canvas-based tower defense game with campaign/endless modes, hero system, faction synergies, random events, and weather system.">
   <title>Tower Defense</title>
+  <meta name="application-name" content="Tower Defense">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tower Defense">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icon.png">
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-  <!-- Custom Title Bar -->
-  <div id="titlebar">
-    <span class="title-text">⚔ TOWER DEFENSE</span>
-    <div class="window-controls">
-      <button class="btn-minimize" id="btnMinimize">─</button>
-      <button class="btn-maximize" id="btnMaximize"><span class="maximize-box"></span></button>
-      <button class="btn-close" id="btnClose">✕</button>
-    </div>
-  </div>
+
 
   <!-- Game Container -->
-  <div id="gameContainer">
-    <canvas id="gameCanvas"></canvas>
-  </div>
+  <main id="gameContainer">
+    <canvas id="gameCanvas" role="img" aria-label="Tower Defense game canvas"></canvas>
+  </main>
 
   <!-- Achievement Notification -->
   <div id="achievementNotify">
@@ -33,6 +35,12 @@
     </div>
   </div>
 
+  <script src="js/bridge.js"></script>
   <script type="module" src="js/index.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function(e) { console.warn('SW registration failed:', e); });
+    }
+  </script>
 </body>
 </html>

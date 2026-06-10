@@ -66,6 +66,7 @@ export class EnemyManager {
       } else if (!e.alive && !e.reachedEnd) {
         e._killed = true;
         e._leaked = false;
+        this.handleDeath(e);
         this._pool.release(e);
       }
     }
@@ -81,5 +82,45 @@ export class EnemyManager {
 
   getActive() {
     return this._pool.getActive();
+  }
+
+  spawnEnemyAt(stats, x, y) {
+    const enemy = this._pool.get();
+    enemy.init(stats.type || 'normal', stats, x, y, this.map.getPathLength());
+    // Set path to nearest point on path
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < this.map.getPathLength(); i++) {
+      const p = this.map.getPathPixel(i);
+      if (p) {
+        const dx = p.x - x;
+        const dy = p.y - y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < bestDist) {
+          bestDist = d;
+          bestIdx = i;
+        }
+      }
+    }
+    enemy.pathIndex = bestIdx;
+    const nxt = this.map.getPathPixel(Math.min(bestIdx + 1, this.map.getPathLength() - 1));
+    if (nxt) {
+      enemy.targetX = nxt.x;
+      enemy.targetY = nxt.y;
+    }
+    enemy.progress = 0;
+    return enemy;
+  }
+
+  handleDeath(enemy) {
+    // Splitter: spawn minions on death
+    if (enemy.type === 'splitter' && enemy.splitCount > 0) {
+      for (let i = 0; i < enemy.splitCount; i++) {
+        const offX = (Math.random() - 0.5) * 20;
+        const offY = (Math.random() - 0.5) * 20;
+        const splitStats = { type: 'swarm', name: 'Split', color: '#cb7ddb', maxHp: 20, speed: 70, armor: 0, bounty: 3, size: 5, isFlying: false, isBoss: false };
+        this.spawnEnemyAt(splitStats, enemy.x + offX, enemy.y + offY);
+      }
+    }
   }
 }

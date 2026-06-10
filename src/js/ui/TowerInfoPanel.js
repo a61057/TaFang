@@ -23,6 +23,7 @@ export class TowerInfoPanel {
         <button class="action-btn upgrade-btn" id="btnUpgrade">${t('towerInfo.upgrade', 0)}</button>
         <button class="action-btn sell-btn" id="btnSell">${t('towerInfo.sell', 0)}</button>
       </div>
+      <div class="evo-actions" id="evoActions" style="display:none;"></div>
     `;
     document.body.appendChild(this.element);
 
@@ -70,10 +71,13 @@ export class TowerInfoPanel {
     const type = TOWER_TYPES[tower.typeId];
     const stats = tower.stats;
     const localeKey = (TOWER_TYPE_MAP[tower.typeId] || tower.typeId).toLowerCase();
+    const evoName = tower._evolutionName;
 
-    this.element.querySelector('#towerName').textContent = `${t(`tower.${localeKey}.name`)} ${t('towerInfo.level', tower.level + 1)}`;
+    this.element.querySelector('#towerName').textContent =
+      evoName ? `${evoName} ${t('towerInfo.level', tower.level + 1)}` :
+      `${t(`tower.${localeKey}.name`)} ${t('towerInfo.level', tower.level + 1)}`;
 
-    const statsHtml = `
+    let statsHtml = `
       <div class="stat-row"><span>${t('towerInfo.damage')}</span><span>${stats.damage}</span></div>
       <div class="stat-row"><span>${t('towerInfo.fireRate')}</span><span>${stats.fireRate.toFixed(2)}s</span></div>
       <div class="stat-row"><span>${t('towerInfo.range')}</span><span>${stats.range}px</span></div>
@@ -84,23 +88,59 @@ export class TowerInfoPanel {
       ${stats.chainCount ? `<div class="stat-row"><span>${t('towerInfo.chain')}</span><span>${t('towerInfo.targets', stats.chainCount)}</span></div>` : ''}
       ${stats.buffRange ? `<div class="stat-row"><span>${t('towerInfo.buffRange')}</span><span>${stats.buffRange}px</span></div>` : ''}
       ${stats.rangeBonus ? `<div class="stat-row"><span>${t('towerInfo.rangeBonus')}</span><span>+${stats.rangeBonus}px</span></div>` : ''}
+      ${stats.burnDamage ? `<div class="stat-row"><span>${t('towerInfo.burnDmg')}</span><span>${stats.burnDamage}</span></div>` : ''}
+      ${stats.poisonDamage ? `<div class="stat-row"><span>${t('towerInfo.poisonDmg')}</span><span>${stats.poisonDamage}</span></div>` : ''}
+      ${stats.armorPierce ? `<div class="stat-row"><span>${t('towerInfo.armorPierce')}</span><span>${stats.armorPierce}</span></div>` : ''}
+      ${stats.spawnChance ? `<div class="stat-row"><span>${t('towerInfo.spawnChance')}</span><span>${Math.round(stats.spawnChance * 100)}%</span></div>` : ''}
     `;
     this.element.querySelector('#towerStats').innerHTML = statsHtml;
 
     const upgradeBtn = this.element.querySelector('#btnUpgrade');
-    if (tower.canUpgrade()) {
+    const evoActions = this.element.querySelector('#evoActions');
+
+    if (tower.canEvolve()) {
+      upgradeBtn.textContent = t('towerInfo.evolve');
+      upgradeBtn.disabled = true;
+      upgradeBtn.style.display = 'block';
+      this._showEvoChoices(tower, evoActions);
+    } else if (tower.canUpgrade()) {
       const cost = tower.getUpgradeCost();
       upgradeBtn.disabled = this.engine.gold < cost;
       upgradeBtn.textContent = t('towerInfo.upgrade', cost);
       upgradeBtn.style.display = 'block';
+      evoActions.style.display = 'none';
     } else {
       upgradeBtn.textContent = t('towerInfo.maxLevel');
       upgradeBtn.disabled = true;
       upgradeBtn.style.display = 'block';
+      evoActions.style.display = 'none';
     }
 
     const sellValue = tower.getSellValue();
     this.element.querySelector('#btnSell').textContent = t('towerInfo.sell', sellValue);
+  }
+
+  _showEvoChoices(tower, container) {
+    const type = TOWER_TYPES[tower.typeId];
+    if (!type || !type.evolutions) { container.style.display = 'none'; return; }
+    let html = '<div class="evo-title">Choose Evolution:</div>';
+    type.evolutions.forEach((evo, i) => {
+      const cost = evo.stats.cost;
+      const canAfford = this.engine.gold >= cost;
+      html += `<button class="evo-btn ${canAfford ? '' : 'disabled'}" data-branch="${i}">
+        <span class="evo-name">${evo.name}</span>
+        <span class="evo-cost">${cost}g</span>
+      </button>`;
+    });
+    container.innerHTML = html;
+    container.style.display = 'flex';
+
+    container.querySelectorAll('.evo-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const branch = parseInt(btn.dataset.branch);
+        this.engine.evolveTower(tower, branch);
+      });
+    });
   }
 
   hide() {

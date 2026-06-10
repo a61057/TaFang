@@ -82,6 +82,14 @@ export class EventSystem {
         break;
       case 'fog_ahead':
         break;
+      case 'moonlight':
+        break;
+      case 'sandstorm':
+        break;
+      case 'hero_boost':
+        break;
+      case 'time_warp':
+        break;
       case 'repair':
         ge.lives = Math.min(ge.lives + 5, 99);
         break;
@@ -130,6 +138,7 @@ export class EventSystem {
 
   getEnemyHpMultiplier() {
     if (this.activeEvent && this.activeEvent.id === 'enemy_boost') return 1.3;
+    if (this.activeEvent && this.activeEvent.id === 'swarm') return 0.6;
     return 1;
   }
 
@@ -139,10 +148,41 @@ export class EventSystem {
     return 1;
   }
 
+  getTowerRangeMultiplier() {
+    if (this.activeEvent && this.activeEvent.id === 'fog_ahead') return 0.5;
+    return 1;
+  }
+
   getTowerDamageMultiplier() {
     if (this.activeEvent && this.activeEvent.id === 'blessing') return 1.25;
     if (this.activeEvent && this.activeEvent.id === 'inspire') return 1.15;
     if (this.activeEvent && this.activeEvent.id === 'curse') return 0.8;
+    return 1;
+  }
+
+  getTowerHitChanceMultiplier() {
+    if (this.activeEvent && this.activeEvent.id === 'sandstorm') return 0.7;
+    return 1;
+  }
+
+  isSandstorm() {
+    return this.activeEvent && this.activeEvent.id === 'sandstorm' && this.activeDuration > 0;
+  }
+
+  getHeroAttackMultiplier() {
+    let mult = 1;
+    if (this.activeEvent && this.activeEvent.id === 'moonlight') mult *= 1.5;
+    if (this.activeEvent && this.activeEvent.id === 'hero_boost') mult *= 2;
+    return mult;
+  }
+
+  getHeroRegenMultiplier() {
+    if (this.activeEvent && this.activeEvent.id === 'moonlight') return 20;
+    return 0;
+  }
+
+  getHeroSpeedMultiplier() {
+    if (this.activeEvent && this.activeEvent.id === 'hero_boost') return 1.5;
     return 1;
   }
 

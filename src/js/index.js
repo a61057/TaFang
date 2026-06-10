@@ -4,9 +4,15 @@ import { ACHIEVEMENTS } from './config/achievements.js';
 import { t, th, getLanguage, setLanguage, setEmojiReplacer } from './config/locale.js';
 import { MainMenu } from './ui/MainMenu.js';
 import { initIconProvider, replaceEmoji, iconHTML, iconElem } from './ui/IconProvider.js';
+import { loadTheme, getThemeNames, getCurrentTheme, applyTheme } from './managers/ThemeManager.js';
+import { ChallengePanel } from './ui/ChallengePanel.js';
+import { TalentPanel } from './ui/TalentPanel.js';
+import { getChallenge } from './config/challengeData.js';
 
 let engine = null;
 let mainMenu = null;
+let challengePanel = null;
+let talentPanel = null;
 const achievementNotifyEl = document.getElementById('achievementNotify');
 const achIcon = document.getElementById('achIcon');
 const achName = document.getElementById('achName');
@@ -15,6 +21,7 @@ const achDesc = document.getElementById('achDesc');
 function init() {
   initIconProvider();
   setEmojiReplacer(replaceEmoji);
+  loadTheme();
   const hash = window.location.hash;
 
   // Child windows - don't start game engine
@@ -28,14 +35,22 @@ function init() {
     return;
   }
 
-  const titleEl = document.querySelector('.title-text');
-  if (titleEl) titleEl.textContent = t('titlebar.text');
-
   const canvas = document.getElementById('gameCanvas');
   const container = document.getElementById('gameContainer');
 
   engine = new GameEngine(canvas);
   handleResize();
+
+  talentPanel = new TalentPanel();
+  engine.setTalentPanel(talentPanel);
+
+  challengePanel = new ChallengePanel((challengeId) => {
+    challengePanel.hide();
+    const ch = getChallenge(challengeId);
+    if (ch) {
+      engine.startChallenge(challengeId, ch.modifiers, ch.waves);
+    }
+  });
 
   // Show main menu
   mainMenu = new MainMenu(
@@ -58,6 +73,12 @@ function init() {
     () => { // Achievements
       window.location.hash = '#achievements';
       window.location.reload();
+    },
+    () => { // Challenge
+      challengePanel.show();
+    },
+    () => { // Talents
+      talentPanel.show();
     }
   );
   engine.mainMenu = mainMenu;
@@ -141,10 +162,10 @@ function showAchievementNotification(ach) {
   }, 3500);
 }
 
-function showNotification(text) {
+function showNotification(html) {
   const el = document.createElement('div');
   el.className = 'notification';
-  el.innerHTML = text;
+  el.innerHTML = html;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3000);
 }
@@ -214,6 +235,14 @@ function initSettingsWindow() {
           <option value="zh" ${currentLang === 'zh' ? 'selected' : ''}>${t('lang.zh')}</option>
         </select>
       </div>
+      <div class="setting-row">
+        <label>${t('settings.theme')}</label>
+        <select id="themeSelect">
+          ${getThemeNames().map(name =>
+            `<option value="${name}" ${getCurrentTheme() === name ? 'selected' : ''}>${t('theme.' + name)}</option>`
+          ).join('')}
+        </select>
+      </div>
     </div>
 
     <button class="hud-btn primary" id="btnSettingsClose" style="margin-top:20px;">${t('settings.close')}</button>
@@ -230,7 +259,13 @@ function initSettingsWindow() {
     });
   } else {
     const saved = localStorage.getItem('td_settings');
-    if (saved) applySettings(JSON.parse(saved));
+    if (saved) {
+      try {
+        applySettings(JSON.parse(saved));
+      } catch (e) {
+        console.warn('Failed to parse saved settings:', e);
+      }
+    }
   }
 
   // Save on change
@@ -242,7 +277,8 @@ function initSettingsWindow() {
       sfxEnabled: document.getElementById('sfxEnabled').checked,
       showFps: document.getElementById('showFps').checked,
       defaultSpeed: parseInt(document.getElementById('defaultSpeed').value),
-      language: document.getElementById('languageSelect').value
+      language: document.getElementById('languageSelect').value,
+      theme: document.getElementById('themeSelect').value
     };
     if (window.electronAPI) {
       window.electronAPI.setSettings(data);
@@ -252,7 +288,7 @@ function initSettingsWindow() {
     }
   }
 
-  document.querySelectorAll('#masterVolume, #sfxVolume, #musicEnabled, #sfxEnabled, #showFps, #defaultSpeed, #languageSelect').forEach(el => {
+  document.querySelectorAll('#masterVolume, #sfxVolume, #musicEnabled, #sfxEnabled, #showFps, #defaultSpeed, #languageSelect, #themeSelect').forEach(el => {
     el.addEventListener('change', saveSettings);
     el.addEventListener('input', saveSettings);
   });
@@ -282,9 +318,16 @@ function initSettingsWindow() {
     rows[4].querySelector('label').textContent = t('settings.showFps');
     rows[5].querySelector('label').textContent = t('settings.gameSpeed');
     rows[6].querySelector('label').textContent = t('settings.language');
-    const opts = document.querySelectorAll('#languageSelect option');
-    opts[0].textContent = t('lang.en');
-    opts[1].textContent = t('lang.zh');
+    rows[7].querySelector('label').textContent = t('settings.theme');
+    const langOpts = document.querySelectorAll('#languageSelect option');
+    langOpts[0].textContent = t('lang.en');
+    langOpts[1].textContent = t('lang.zh');
+    const themeOpts = document.querySelectorAll('#themeSelect option');
+    themeOpts[0].textContent = t('theme.naval');
+    themeOpts[1].textContent = t('theme.shadow');
+    themeOpts[2].textContent = t('theme.forest');
+    themeOpts[3].textContent = t('theme.magma');
+    themeOpts[4].textContent = t('theme.cyber');
   }
 
   document.getElementById('languageSelect').addEventListener('change', (e) => {
@@ -293,6 +336,10 @@ function initSettingsWindow() {
     if (window.electronAPI) {
       window.electronAPI.sendSettings({ language: e.target.value });
     }
+  });
+
+  document.getElementById('themeSelect').addEventListener('change', (e) => {
+    applyTheme(e.target.value);
   });
 
   if (window.electronAPI) {
@@ -316,6 +363,10 @@ function applySettings(data) {
   if (data.language !== undefined) {
     setLanguage(data.language);
     document.getElementById('languageSelect').value = data.language;
+  }
+  if (data.theme !== undefined) {
+    document.getElementById('themeSelect').value = data.theme;
+    applyTheme(data.theme);
   }
 }
 
@@ -367,17 +418,12 @@ function initAchievementsWindow() {
   });
 }
 
-// Window controls
-document.getElementById('btnMinimize').addEventListener('click', () => {
-  if (window.electronAPI) window.electronAPI.minimize();
+// Global error handlers
+window.addEventListener('error', (e) => {
+  console.error('[Global Error]', e.error?.message || e.message, 'at', e.filename, 'line', e.lineno);
 });
-
-document.getElementById('btnMaximize').addEventListener('click', () => {
-  if (window.electronAPI) window.electronAPI.maximize();
-});
-
-document.getElementById('btnClose').addEventListener('click', () => {
-  if (window.electronAPI) window.electronAPI.close();
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[Unhandled Promise]', e.reason?.message || e.reason);
 });
 
 // Resize handler

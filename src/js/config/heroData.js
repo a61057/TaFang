@@ -95,6 +95,38 @@ export const WEAPONS = {
     id: 'grenade', nameKey: 'weapon.grenade',
     stat: 'range', bonus: 25, cost: 180,
     descKey: 'weapon.grenadeDesc'
+  },
+
+  // 新装备
+  heavy_armor: {
+    id: 'heavy_armor', nameKey: 'weapon.heavy_armor',
+    stat: 'maxHp', bonus: 250, cost: 280,
+    descKey: 'weapon.heavy_armorDesc'
+  },
+  sniper_chamber: {
+    id: 'sniper_chamber', nameKey: 'weapon.sniper_chamber',
+    stat: 'attack', bonus: 22, cost: 300,
+    descKey: 'weapon.sniper_chamberDesc'
+  },
+  targeting_computer: {
+    id: 'targeting_computer', nameKey: 'weapon.targeting_computer',
+    stat: 'attackSpeed', bonus: -0.4, cost: 350,
+    descKey: 'weapon.targeting_computerDesc'
+  },
+  nano_regen: {
+    id: 'nano_regen', nameKey: 'weapon.nano_regen',
+    stat: 'maxHp', bonus: 80, cost: 200,
+    descKey: 'weapon.nano_regenDesc'
+  },
+  mag_boots: {
+    id: 'mag_boots', nameKey: 'weapon.mag_boots',
+    stat: 'speed', bonus: 40, cost: 180,
+    descKey: 'weapon.mag_bootsDesc'
+  },
+  flame_core: {
+    id: 'flame_core', nameKey: 'weapon.flame_core',
+    stat: 'attack', bonus: 15, cost: 250,
+    descKey: 'weapon.flame_coreDesc'
   }
 };
 

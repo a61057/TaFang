@@ -1,6 +1,26 @@
 import { ENEMY_TYPES, getEnemyStats } from '../config/enemyData.js';
 import { PREP_TIME, WAVE_BASE_REWARD, PER_WAVE_REWARD, BOSS_INTERVAL } from '../config/constants.js';
 
+const BOSS_TALENT_WAVES = {
+  10: ['frostAura'],
+  15: ['flameAura'],
+  20: ['fortify'],
+  25: ['frostAura', 'flameAura'],
+  30: ['flameAura', 'fortify'],
+  35: ['summonMinions'],
+  40: ['summonMinions', 'flameAura'],
+  45: ['summonMinions', 'rage'],
+  50: ['summonMinions', 'rage', 'fortify']
+};
+
+function getBossTalentsForWave(wave) {
+  const keys = Object.keys(BOSS_TALENT_WAVES).map(Number).sort((a, b) => b - a);
+  for (const w of keys) {
+    if (wave >= w) return BOSS_TALENT_WAVES[w];
+  }
+  return [];
+}
+
 export class WaveManager {
   constructor(enemyManager, gameEngine) {
     this.enemyManager = enemyManager;
@@ -27,28 +47,55 @@ export class WaveManager {
     const enemies = [];
 
     let baseCount = 5 + wave * 2;
-    // 30波后增加敌人数
     if (wave >= 30) {
       baseCount = Math.floor(baseCount * (1.1 + (wave - 29) * 0.02));
     }
 
-    // Boss 波次
-    if (wave % BOSS_INTERVAL === 0) {
+    // Boss wave — apply talents
+    const bossInterval = this.gameEngine?.challengeModifiers?.bossInterval || BOSS_INTERVAL;
+    if (wave % bossInterval === 0) {
+      const talents = getBossTalentsForWave(wave);
       if (wave === 45) {
-        enemies.push({ type: 'megaboss', count: 1 });
-        enemies.push({ type: 'boss', count: 1 });
+        enemies.push({ type: 'megaboss', count: 1, talents });
+        enemies.push({ type: 'boss', count: 2, talents: ['fortify'] });
       } else if (wave >= 40) {
-        enemies.push({ type: 'boss', count: 2 });
+        enemies.push({ type: 'boss', count: 2, talents });
       } else {
-        enemies.push({ type: 'boss', count: 1 });
+        enemies.push({ type: 'boss', count: 1, talents });
       }
     }
 
-    // 35波后轰炸机 + 精英
+    // New enemies start appearing from wave 8+
+    if (wave >= 8) {
+      enemies.push({ type: 'swarm', count: Math.floor(baseCount * (wave >= 20 ? 0.25 : 0.15)) });
+    }
+    if (wave >= 10) {
+      enemies.push({ type: 'shielded', count: Math.floor(baseCount * 0.12) });
+    }
+    if (wave >= 12) {
+      enemies.push({ type: 'regenerator', count: Math.floor(baseCount * 0.1) });
+    }
+    if (wave >= 15) {
+      enemies.push({ type: 'stealth', count: Math.floor(baseCount * 0.1) });
+    }
+    if (wave >= 18) {
+      enemies.push({ type: 'leech', count: Math.floor(baseCount * 0.08) });
+    }
+    if (wave >= 20) {
+      enemies.push({ type: 'splitter', count: Math.floor(baseCount * 0.08) });
+    }
+    if (wave >= 25) {
+      enemies.push({ type: 'void', count: Math.floor(baseCount * 0.08) });
+    }
+    if (wave >= 28) {
+      enemies.push({ type: 'crystal', count: Math.floor(baseCount * 0.08) });
+    }
+
+    // Bomber from wave 35
     if (wave >= 35) {
       const bomberCount = wave === 45 ? 2 : 1 + Math.floor((wave - 35) / 6);
       enemies.push({ type: 'bomber', count: bomberCount });
-      if (wave % BOSS_INTERVAL !== 0) {
+      if (wave % bossInterval !== 0) {
         enemies.push({ type: 'heavy', count: Math.floor(baseCount * 0.15) });
         enemies.push({ type: 'flying', count: Math.floor(baseCount * 0.1) });
       }
@@ -91,7 +138,7 @@ export class WaveManager {
 
     for (const entry of enemies) {
       for (let i = 0; i < entry.count; i++) {
-        this.spawnQueue.push(entry.type);
+        this.spawnQueue.push({ type: entry.type, talents: entry.talents || null });
       }
     }
 
@@ -115,9 +162,21 @@ export class WaveManager {
       if (this.spawnQueue.length > 0) {
         this.spawnTimer -= dt;
         if (this.spawnTimer <= 0) {
-          const typeId = this.spawnQueue.shift();
+          const entry = this.spawnQueue.shift();
+          const typeId = entry.type;
           const stats = getEnemyStats(typeId, this.currentWave);
           if (stats) {
+            if (entry.talents) {
+              stats.bossTalents = entry.talents;
+            }
+            // Challenge modifiers
+            const mods = this.gameEngine ? this.gameEngine.challengeModifiers : {};
+            if (mods.bonusArmor) stats.armor += mods.bonusArmor;
+            if (mods.swarmMult) {
+              stats.maxHp = Math.floor(stats.maxHp * (1 / mods.swarmMult));
+              stats.size = Math.floor(stats.size * (mods.swarmSizeMult || 0.6));
+              stats.bounty = Math.floor(stats.bounty / mods.swarmMult);
+            }
             const enemy = this.enemyManager.spawnEnemy(stats, this._hpMult, this._speedMult);
             this.enemiesSpawned++;
           }
